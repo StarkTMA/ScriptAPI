@@ -1,0 +1,28 @@
+{
+	"name": "starktma",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"devDependencies": {
+		"@minecraft/server-ui": "^2.0.0",
+		"@types/node": "^24.1.0",
+		"lerna": "^8.2.3",
+		"typescript": "^5.8.3"
+	},
+	"scripts": {
+		"build": "lerna run build --stream",
+		"package": "lerna run package --stream",
+		"publish": "lerna publish --no-private"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"dependencies": {
+		"tsc": "^2.0.4"
+	}
+}

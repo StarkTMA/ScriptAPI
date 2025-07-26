@@ -1,0 +1,16 @@
+{
+	"name": "@starktma/inventory-manager",
+	"version": "1.0.0",
+	"description": "",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"devDependencies": {},
+	"scripts": {
+		"build": "tsc --project tsconfig.json",
+		"package": "npm pack --pack-destination dist"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs"
+}

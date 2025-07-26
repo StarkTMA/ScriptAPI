@@ -1,0 +1,9 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "packages/property-database" },
+		{ "path": "packages/minecraft-utils" }//,
+		//{ "path": "packages/game-state-machine" },
+		//{ "path": "packages/inventory-manager" }
+	]
+}

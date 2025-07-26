@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"module": "node16",
+		"moduleResolution": "node16",
+		"target": "ES2022",
+		"esModuleInterop": true,
+		"sourceMap": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["node"],
+    	"resolveJsonModule": true,
+
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"incremental": true,
+		"skipLibCheck": true,
+		"noEmitOnError": true,
+		"typeRoots": ["./node_modules/@types"]
+	}
+}

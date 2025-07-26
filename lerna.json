@@ -1,0 +1,4 @@
+{
+	"packages": ["packages/minecraft-utils", "packages/property-database"],
+	"version": "independent"
+}
