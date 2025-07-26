@@ -24,5 +24,8 @@
 	],
 	"dependencies": {
 		"tsc": "^2.0.4"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
