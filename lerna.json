@@ -1,4 +1,8 @@
 {
-	"packages": ["packages/minecraft-utils", "packages/property-database"],
+	"packages": [
+		"packages/minecraft-utils",
+		"packages/property-database",
+		"packages/game-state-machine"
+	],
 	"version": "independent"
 }
