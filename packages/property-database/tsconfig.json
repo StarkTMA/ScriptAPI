@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"target": "ES2022",
+		"esModuleInterop": true,
+		"sourceMap": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"incremental": true,
+		"skipLibCheck": true,
+		"noEmitOnError": true,
+		"typeRoots": ["./node_modules/@types"],
+
+		"outDir": "./dist",
+		"rootDir": "./src"
+	},
+  "include": ["src"]
+}

@@ -1,0 +1,24 @@
+# Node.js dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+**/*.tsbuildinfo
+
+# Editor and IDE specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files and logs
+*.log
+*.tmp
+*.swp
+
+# Sensitive information
+.env
