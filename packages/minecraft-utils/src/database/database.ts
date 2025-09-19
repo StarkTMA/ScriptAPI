@@ -157,9 +157,10 @@ class DatabaseManager {
  * 	}
  */
 export class SimpleDatabase<T extends SimpleObject> {
-	private databaseName: string;
 	private mainDB: DatabaseManager;
 	private localDB: T[];
+
+	protected databaseName: string;
 
 	/**
 	 * The constructor initializes the local database and syncs it with the main database.

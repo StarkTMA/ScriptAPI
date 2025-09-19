@@ -20,6 +20,6 @@
 		"outDir": "./dist",
 		"rootDir": "./src"
 	},
-	"references": [{ "path": "../property-database" }],
+	"references": [{ "path": "../minecraft-utils" }],
 	"include": ["src"]
 }

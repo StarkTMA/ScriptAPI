@@ -27,9 +27,6 @@ jobs:
 
       - name: Publish
         run: |
-          echo "Checking npm authentication..."
-          npm whoami
-          echo "Publishing packages..."
           npm run publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

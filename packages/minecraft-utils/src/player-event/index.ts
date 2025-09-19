@@ -1,0 +1,194 @@
+import {
+	system,
+	world,
+	Player,
+	ButtonState,
+	EntityEquippableComponent,
+	EntityInventoryComponent,
+	EquipmentSlot,
+	InputButton,
+	ItemStack,
+} from "@minecraft/server";
+import { NAMESPACE } from "./constants";
+
+type EventCallback<T = CustomPlayer> = (player: T) => void;
+
+enum CustomPlayerEvents {
+	Tick = "tick",
+	JumpStart = "jumpStart",
+	JumpHold = "jumpHold",
+	JumpEnd = "jumpEnd",
+	SneakStart = "sneakStart",
+	SneakHold = "sneakHold",
+	SneakEnd = "sneakEnd",
+}
+
+enum PropertyIDs {
+	OriginalNameTag = `${NAMESPACE}:original_name_tag`,
+}
+
+type PlayerEventType = CustomPlayerEvents | string;
+
+class EventGroup<T = CustomPlayer> {
+	private callbacks = new Map<PlayerEventType, EventCallback<T>[]>();
+
+	constructor() {
+		// Initialize with core events
+		Object.values(CustomPlayerEvents).forEach((event) => {
+			this.callbacks.set(event, []);
+		});
+	}
+
+	private run(callbacks: EventCallback<T>[], player: T) {
+		for (const cb of callbacks) cb(player);
+	}
+
+	trigger(type: PlayerEventType, player: T) {
+		const callbacks = this.callbacks.get(type);
+		if (callbacks) {
+			this.run(callbacks, player);
+		}
+	}
+
+	on(type: PlayerEventType, callback: EventCallback<T>) {
+		if (!this.callbacks.has(type)) {
+			this.callbacks.set(type, []);
+		}
+		this.callbacks.get(type)!.push(callback);
+	}
+
+	// Simple way to remove listeners
+	off(type: PlayerEventType, callback: EventCallback<T>) {
+		const callbacks = this.callbacks.get(type);
+		if (callbacks) {
+			const index = callbacks.indexOf(callback);
+			if (index > -1) {
+				callbacks.splice(index, 1);
+			}
+		}
+	}
+}
+
+class CustomPlayer {
+	player: Player;
+	stateTick = 0;
+	JumpTick = 0;
+	SneakTick = 0;
+
+	constructor(player: Player) {
+		this.player = player;
+		this.reset();
+	}
+
+	get equippableComponent() {
+		return this.player.getComponent(EntityEquippableComponent.componentId) as EntityEquippableComponent;
+	}
+
+	get inventoryComponent() {
+		return this.player.getComponent(EntityInventoryComponent.componentId) as EntityInventoryComponent;
+	}
+
+	getEquippedItem(): ItemStack | undefined {
+		return this.equippableComponent.getEquipment(EquipmentSlot.Mainhand);
+	}
+
+	reset() {
+		this.player.nameTag = (this.player.getDynamicProperty(PropertyIDs.OriginalNameTag) as string | undefined) ?? this.player.nameTag;
+		this.stateTick = 0;
+		this.JumpTick = 0;
+		this.player.camera.clear();
+	}
+
+	tick() {
+		this.stateTick++;
+
+		if (this.player.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed && !this.player.isOnGround) {
+			this.JumpTick++;
+		} else if (this.JumpTick > 0) {
+			this.JumpTick = -1;
+		} else {
+			this.JumpTick = 0;
+		}
+
+		if (this.player.inputInfo.getButtonState(InputButton.Sneak) === ButtonState.Pressed) {
+			this.SneakTick++;
+		} else if (this.SneakTick > 0) {
+			this.SneakTick = -1;
+		} else {
+			this.SneakTick = 0;
+		}
+	}
+}
+
+class PlayerManager<T extends CustomPlayer = CustomPlayer> {
+	private players = new Map<string, T>();
+	private events = new Map<string, EventGroup<T>>();
+
+	protected constructor() {
+		world.afterEvents.playerSpawn.subscribe(({ player, initialSpawn }) => {
+			const id = player.id;
+			const existing = this.getPlayer(id);
+
+			if (initialSpawn || !existing) {
+				this.addPlayer(player);
+			} else {
+				existing.reset();
+			}
+		});
+
+		world.afterEvents.playerLeave.subscribe(({ playerId }) => {
+			this.removePlayer(playerId);
+		});
+
+		world.afterEvents.worldLoad.subscribe(() => {
+			world.getAllPlayers().forEach((player) => this.addPlayer(player));
+		});
+
+		world.afterEvents.worldLoad.subscribe(() => {
+			system.runInterval(() => {
+				this.tick();
+			});
+		});
+	}
+
+	protected createPlayerManager(player: Player): T {
+		return new CustomPlayer(player) as T;
+	}
+
+	getPlayer(id: string) {
+		return this.players.get(id);
+	}
+
+	removePlayer(id: string) {
+		this.players.delete(id);
+	}
+
+	addPlayer(player: Player) {
+		if (this.players.has(player.id)) return;
+		this.players.set(player.id, this.createPlayerManager(player));
+	}
+
+	registerEvents(eventID: string) {
+		const eventGroup = new EventGroup<T>();
+		this.events.set(eventID, eventGroup);
+		return { event: eventGroup };
+	}
+
+	getEvents(eventID: string) {
+		return this.events.get(eventID);
+	}
+
+	tick() {
+		for (const manager of this.players.values()) {
+			const { player } = manager;
+			if (!player.isValid) continue;
+
+			manager.tick();
+			this.events.forEach((eventGroup) => {
+				eventGroup.trigger(CustomPlayerEvents.Tick, manager);
+			});
+		}
+	}
+}
+
+export { CustomPlayerEvents, PropertyIDs, CustomPlayer, PlayerManager };

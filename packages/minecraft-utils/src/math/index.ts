@@ -1,4 +1,4 @@
-import { Vector3 } from "@minecraft/server";
+import { RGB, RGBA, Vector3 } from "@minecraft/server";
 
 /**
  * Converts an angle in degrees to radians.
@@ -18,7 +18,7 @@ export function toRadians(degrees: number): number {
  */
 export function calculateDistance(position1: Vector3, position2: Vector3): number {
 	return Math.sqrt(
-		Math.sqrt(Math.pow(position1.x - position2.x, 2) + Math.pow(position1.y - position2.y, 2)) + Math.pow(position1.z - position2.z, 2)
+		Math.pow(position1.x - position2.x, 2) + Math.pow(position1.y - position2.y, 2) + Math.pow(position1.z - position2.z, 2)
 	);
 }
 
@@ -39,7 +39,7 @@ export function toDegrees(radians: number): number {
  * @returns An object containing the red, green, blue, and alpha components as numbers between 0 and 1.
  * @throws Error if the hex string is invalid.
  */
-export function hexToRgba(hex: string): { red: number; green: number; blue: number; alpha: number } {
+export function hexToRgba(hex: string, stripAlpha: boolean = false): RGB | RGBA {
 	if (!/^#([a-fA-F0-9]{4}|[a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/.test(hex)) {
 		throw new Error("Invalid hex color");
 	}
@@ -57,6 +57,9 @@ export function hexToRgba(hex: string): { red: number; green: number; blue: numb
 	const blue = parseInt(normalized.substring(4, 6), 16) / 255;
 	const alpha = (normalized.length === 8 ? parseInt(normalized.substring(6, 8), 16) : 255) / 255;
 
+	if (stripAlpha) {
+		return { red, green, blue };
+	}
 	return { red, green, blue, alpha };
 }
 

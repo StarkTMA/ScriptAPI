@@ -1,6 +1,6 @@
 {
 	"name": "@starktma/minecraft-utils",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -23,6 +23,14 @@
 		"./minecraft": {
 			"import": "./dist/minecraft/index.js",
 			"types": "./dist/minecraft/index.d.ts"
+		},
+		"./database": {
+			"import": "./dist/database/index.js",
+			"types": "./dist/database/index.d.ts"
+		},
+		"./player-events": {
+			"import": "./dist/player-event/index.js",
+			"types": "./dist/player-event/index.d.ts"
 		}
 	},
 	"publishConfig": {

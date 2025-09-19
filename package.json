@@ -1,12 +1,14 @@
 {
 	"name": "starktma",
-	"version": "1.0.0",
+	"version": "1.2.0",
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "npm run build --workspace=@starktma/property-database && npm run build --workspace=@starktma/minecraft-utils && npm run build --workspace=@starktma/inventory-manager && npm run build --workspace=@starktma/game-state-machine",
+		"build": "npm run build --workspace=@starktma/minecraft-utils && npm run build --workspace=@starktma/game-state-machine",
 		"package": "npm run package --workspaces --if-present",
-		"publish": "npm publish --workspaces --access public"
+		"publish": "npm publish --workspaces --access public",
+		"link": "npm link --workspaces",
+		"unlink": "npm unlink --workspaces"
 	},
 	"keywords": [],
 	"author": "",
