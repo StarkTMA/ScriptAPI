@@ -1,6 +1,6 @@
 {
 	"name": "@starktma/minecraft-utils",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"description": "",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -9,7 +9,8 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"build": "npx -p typescript tsc --project tsconfig.json"
+		"build": "npx -p typescript tsc --project tsconfig.json",
+		"prepare": "npm run build"
 	},
 	"exports": {
 		".": {
@@ -36,6 +37,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"files": ["dist", "README.md", "LICENSE"],
 	"devDependencies": {
 		"@minecraft/server": "^2.1.0",
 		"@minecraft/server-ui": "^2.0.0",
