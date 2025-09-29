@@ -9,9 +9,9 @@ import {
 	InputButton,
 	ItemStack,
 } from "@minecraft/server";
-import { NAMESPACE } from "./constants";
 
 type EventCallback<T = CustomPlayer> = (player: T) => void;
+type PlayerEventType = CustomPlayerEvents | string;
 
 enum CustomPlayerEvents {
 	Tick = "tick",
@@ -22,12 +22,6 @@ enum CustomPlayerEvents {
 	SneakHold = "sneakHold",
 	SneakEnd = "sneakEnd",
 }
-
-enum PropertyIDs {
-	OriginalNameTag = `${NAMESPACE}:original_name_tag`,
-}
-
-type PlayerEventType = CustomPlayerEvents | string;
 
 class EventGroup<T = CustomPlayer> {
 	private callbacks = new Map<PlayerEventType, EventCallback<T>[]>();
@@ -93,7 +87,6 @@ class CustomPlayer {
 	}
 
 	reset() {
-		this.player.nameTag = (this.player.getDynamicProperty(PropertyIDs.OriginalNameTag) as string | undefined) ?? this.player.nameTag;
 		this.stateTick = 0;
 		this.JumpTick = 0;
 		this.player.camera.clear();
@@ -101,8 +94,8 @@ class CustomPlayer {
 
 	tick() {
 		this.stateTick++;
-
-		if (this.player.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed && !this.player.isOnGround) {
+		
+		if (this.player.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed) {
 			this.JumpTick++;
 		} else if (this.JumpTick > 0) {
 			this.JumpTick = -1;
@@ -142,9 +135,6 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 
 		world.afterEvents.worldLoad.subscribe(() => {
 			world.getAllPlayers().forEach((player) => this.addPlayer(player));
-		});
-
-		world.afterEvents.worldLoad.subscribe(() => {
 			system.runInterval(() => {
 				this.tick();
 			});
@@ -191,4 +181,4 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 	}
 }
 
-export { CustomPlayerEvents, PropertyIDs, CustomPlayer, PlayerManager };
+export { CustomPlayerEvents, CustomPlayer, PlayerManager };

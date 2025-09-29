@@ -13,7 +13,7 @@ import {
 	EquipmentSlot,
 	ItemStack,
 } from "@minecraft/server";
-import { calculateDistance, toRadians, toUnsigned } from "../math";
+import { calculateDistance, toRadians, toSigned, toUnsigned } from "../math";
 
 export function getBlocksInASphere(centerBlock: Block | Entity, radius: number, innerRadius?: number) {
 	if (centerBlock) {
@@ -62,7 +62,9 @@ export function displayActionbar(player: Player | undefined, ...message: any) {
  */
 export function snapYawToGrid(angle: number): number {
 	const gridSize = 90;
-	return Math.round(toUnsigned(angle) / gridSize) * gridSize;
+	// Round to nearest grid step, then normalize into [0, 360)
+	const snapped = Math.round(toUnsigned(angle) / gridSize) * gridSize;
+	return ((snapped % 360) + 360) % 360;
 }
 
 /**
@@ -83,12 +85,13 @@ export function snapLocationToGrid(location: Vector3, yaw: Vector2, gridSize: nu
 	};
 }
 
-export function getStructureRotationEnum(angle: number, saveYaw?: number): StructureRotation {
-	const EPS = 1e-4;
-	const diff = snapYawToGrid(angle) - snapYawToGrid(saveYaw ?? 0);
-	if (Math.abs(diff - 90) < EPS) return StructureRotation.Rotate90;
-	if (Math.abs(diff - 180) < EPS) return StructureRotation.Rotate180;
-	if (Math.abs(diff - 270) < EPS) return StructureRotation.Rotate270;
+export function getStructureRotationEnum(angle: number, offset?: number): StructureRotation {
+	const diff = snapYawToGrid(toUnsigned(angle - (offset ?? 0)));
+	console.log(diff);
+
+	if (Math.abs(diff - 90) < Number.EPSILON) return StructureRotation.Rotate90;
+	if (Math.abs(diff - 180) < Number.EPSILON) return StructureRotation.Rotate180;
+	if (Math.abs(diff - 270) < Number.EPSILON) return StructureRotation.Rotate270;
 	return StructureRotation.None;
 }
 

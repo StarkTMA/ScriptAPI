@@ -167,7 +167,7 @@ export class SimpleDatabase<T extends SimpleObject> {
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
 	 */
-	protected constructor(databaseName: string, target: Entity | undefined) {
+	protected constructor(databaseName: string, target?: Entity | undefined) {
 		this.mainDB = new DatabaseManager(target);
 		this.databaseName = databaseName;
 
