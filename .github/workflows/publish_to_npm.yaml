@@ -1,16 +1,17 @@
-name: Publish to npm
+name: Publish to npm (manual)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  publish:
+  full-publish:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -25,8 +26,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish
-        run: |
-          npm run publish
+      - name: Publish all workspaces
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Manual full publish: will publish all workspaces using npm --workspace"
+          npm run publish
+
