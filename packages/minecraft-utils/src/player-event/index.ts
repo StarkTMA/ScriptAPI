@@ -94,7 +94,7 @@ class CustomPlayer {
 
 	tick() {
 		this.stateTick++;
-		
+
 		if (this.player.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed) {
 			this.JumpTick++;
 		} else if (this.JumpTick > 0) {
@@ -145,6 +145,10 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 		return new CustomPlayer(player) as T;
 	}
 
+	getAllPlayers() {
+		return Array.from(this.players.values());
+	}
+
 	getPlayer(id: string) {
 		return this.players.get(id);
 	}
@@ -181,4 +185,4 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 	}
 }
 
-export { CustomPlayerEvents, CustomPlayer, PlayerManager };
+export { CustomPlayerEvents, CustomPlayer, PlayerManager, EventGroup };

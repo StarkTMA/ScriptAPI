@@ -208,3 +208,14 @@ export function saveInventory(entity: Entity, id: string, clearAll: boolean = fa
 
 	return itemCount;
 }
+
+export function getPositionRelative(entity: Entity, offset: Vector3): Vector3 {
+	const yaw = toRadians(entity.getRotation().y);
+	const pitch = toRadians(entity.getRotation().x);
+
+	const x = entity.location.x + offset.x * Math.cos(pitch) * Math.cos(yaw) - offset.z * Math.sin(yaw);
+	const y = entity.location.y + offset.x * Math.sin(pitch) + offset.y;
+	const z = entity.location.z + offset.x * Math.cos(pitch) * Math.sin(yaw) + offset.z * Math.cos(yaw);
+
+	return { x, y, z };
+}
