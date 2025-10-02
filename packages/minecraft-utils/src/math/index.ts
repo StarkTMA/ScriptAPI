@@ -130,3 +130,17 @@ export function positionsEqual(a: Vector3, b: Vector3, tolerance: number = 0.5):
 export function inRange(value: number, min: number, max: number): boolean {
 	return value >= min && value <= max;
 }
+
+export class VectorOperations {
+	static add(v1: Vector3, v2: Vector3): Vector3 {
+		return { x: v1.x + v2.x, y: v1.y + v2.y, z: v1.z + v2.z };
+	}
+
+	static multiply(v: Vector3, scalar: number): Vector3 {
+		return { x: v.x * scalar, y: v.y * scalar, z: v.z * scalar };
+	}
+
+	static stringify(v: Vector3): string {
+		return `${v.x} ${v.y} ${v.z}`;
+	}
+}
