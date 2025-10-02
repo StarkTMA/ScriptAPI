@@ -117,7 +117,7 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 	private players = new Map<string, T>();
 	private events = new Map<string, EventGroup<T>>();
 
-	protected constructor() {
+	protected constructor(tick?: number) {
 		world.afterEvents.playerSpawn.subscribe(({ player, initialSpawn }) => {
 			const id = player.id;
 			const existing = this.getPlayer(id);
@@ -137,7 +137,7 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 			world.getAllPlayers().forEach((player) => this.addPlayer(player));
 			system.runInterval(() => {
 				this.tick();
-			});
+			}, tick ?? 1);
 		});
 	}
 
@@ -145,7 +145,7 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 		return new CustomPlayer(player) as T;
 	}
 
-	getAllPlayers() {
+	getAllPlayers(): T[] {
 		return Array.from(this.players.values());
 	}
 
@@ -173,8 +173,10 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 	}
 
 	tick() {
-		for (const manager of this.players.values()) {
+		const allPlayers = this.getAllPlayers();
+		for (const manager of allPlayers) {
 			const { player } = manager;
+
 			if (!player.isValid) continue;
 
 			manager.tick();
