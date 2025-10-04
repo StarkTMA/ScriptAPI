@@ -131,13 +131,20 @@ export function inRange(value: number, min: number, max: number): boolean {
 	return value >= min && value <= max;
 }
 
+/**
+ * A utility class for performing operations on 3D vectors.
+ */
 export class VectorOperations {
+	static apply(v: Vector3, fn: (component: number) => number): Vector3 {
+		return { x: fn(v.x), y: fn(v.y), z: fn(v.z) };
+	}
+
 	static add(v1: Vector3, v2: Vector3): Vector3 {
 		return { x: v1.x + v2.x, y: v1.y + v2.y, z: v1.z + v2.z };
 	}
 
 	static multiply(v: Vector3, scalar: number): Vector3 {
-		return { x: v.x * scalar, y: v.y * scalar, z: v.z * scalar };
+		return VectorOperations.apply(v, (component) => component * scalar);
 	}
 
 	static stringify(v: Vector3): string {
