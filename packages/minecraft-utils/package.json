@@ -1,6 +1,6 @@
 {
 	"name": "@starktma/minecraft-utils",
-	"version": "1.2.9",
+	"version": "1.3.0",
 	"description": "",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -32,6 +32,10 @@
 		"./player-events": {
 			"import": "./dist/player-event/index.js",
 			"types": "./dist/player-event/index.d.ts"
+		},
+		"./game-state-machine": {
+			"import": "./dist/game-state-machine/index.js",
+			"types": "./dist/game-state-machine/index.d.ts"
 		}
 	},
 	"publishConfig": {
