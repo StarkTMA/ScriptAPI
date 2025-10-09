@@ -1,8 +1,6 @@
 import { BranchDatabase } from "./database";
 import { Level } from "./level";
 import { levelState } from "./interfaces";
-
-//@ts-ignore
 import { NAMESPACE } from "./constants";
 
 class BranchManager {

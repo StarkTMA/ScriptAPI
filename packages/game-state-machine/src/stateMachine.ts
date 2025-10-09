@@ -3,8 +3,6 @@ import { PlayerDatabase } from "./database";
 import { PlayerObject, playerState } from "./interfaces";
 import { Level } from "./level";
 import { Branch } from "./branch";
-
-//@ts-ignore
 import { NAMESPACE } from "./constants";
 
 const RESET_EVENT = `${NAMESPACE}:reset`;
@@ -374,12 +372,6 @@ class StateMachine {
 	}
 }
 
-mc.world.afterEvents.worldLoad.subscribe((eventData) => {
-	stateMachine = StateMachine.getInstance();
-	mainBranch = stateMachine.createBranch("mainBranch", true);
-	mainLevel0 = mainBranch.addLevel("mainLevel0", true);
-});
-
-export let stateMachine: StateMachine;
-export let mainBranch: Branch;
-export let mainLevel0: Level;
+export const stateMachine = StateMachine.getInstance();
+export const mainBranch = stateMachine.createBranch("mainBranch", true);
+export const mainLevel0 = mainBranch.addLevel("mainLevel0", true);

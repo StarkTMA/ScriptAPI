@@ -12,14 +12,16 @@ class DatabaseManager {
 	private static readonly DYNAMIC_PROP_MAX_LENGTH = 32767;
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
-	private target: Entity | World;
+	private target: Entity | World | undefined;
 
 	constructor(target: Entity | undefined) {
-		if (target instanceof Entity) {
-			this.target = target;
-		} else {
-			this.target = world;
-		}
+		world.afterEvents.worldLoad.subscribe(() => {
+			if (target instanceof Entity) {
+				this.target = target;
+			} else {
+				this.target = world;
+			}
+		});
 	}
 
 	/**
@@ -28,6 +30,7 @@ class DatabaseManager {
 	 * @returns True if the database exists, false otherwise.
 	 */
 	hasJSONDatabase(databaseName: string) {
+		if (!this.target) return false;
 		return this.target.getDynamicProperty(NAMESPACE + ":" + databaseName) !== undefined;
 	}
 
@@ -37,6 +40,7 @@ class DatabaseManager {
 	 * @param database The data to be stored in the database.
 	 */
 	addJSONDatabase(databaseName: string, database: object) {
+		if (!this.target) return;
 		const propertyName = `${NAMESPACE}:${databaseName}`;
 		const jsonString = JSON.stringify(database);
 		const existingProp = this.target.getDynamicProperty(propertyName) as string | undefined;
@@ -84,6 +88,7 @@ class DatabaseManager {
 	 * @param databaseName The name of the database.
 	 */
 	removeJSONDatabase(databaseName: string) {
+		if (!this.target) return;
 		const propertyName = `${NAMESPACE}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString !== undefined) {
@@ -108,6 +113,7 @@ class DatabaseManager {
 	 * @throws An error if the database does not exist.
 	 */
 	getJSONDatabase(databaseName: string) {
+		if (!this.target) return;
 		const propertyName = `${NAMESPACE}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString === undefined) {
