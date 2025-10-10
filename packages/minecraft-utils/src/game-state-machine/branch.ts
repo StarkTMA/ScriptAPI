@@ -1,7 +1,7 @@
 import { BranchDatabase } from "./database";
 import { Level } from "./level";
 import { levelState } from "./interfaces";
-import { NAMESPACE } from "../constants";
+import { getPackageNamespace } from "../constants";
 
 class BranchManager {
 	protected branchDatabase: BranchDatabase = BranchDatabase.getInstance();
@@ -50,7 +50,7 @@ class BranchManager {
 	}
 
 	constructor(name: string) {
-		this.identifier = `${NAMESPACE}:${name}`;
+		this.identifier = `${getPackageNamespace()}:${name}`;
 		this.getBranchState();
 	}
 }
@@ -133,7 +133,7 @@ export class Branch extends BranchManager {
 			this.getBranchState();
 			this.levelTick++;
 			this.stateTick++;
-			
+
 			// Progresses to the next level if it exists, the actual level states are handled in the level class
 			if (this.levelState == levelState.COMPLETED) {
 				const levelIDs = Array.from(this.levels.keys());

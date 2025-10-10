@@ -1,6 +1,6 @@
 import { Entity, world, World } from "@minecraft/server";
 import { SimpleObject } from "./interfaces";
-import { NAMESPACE } from "../constants";
+import { getPackageNamespace } from "../constants";
 
 /**
  * DatabaseManager is a class that manages databases stored in Minecraft's world properties.
@@ -13,8 +13,8 @@ class DatabaseManager {
 	private target: Entity | World;
 	private namespace: string;
 
-	constructor(target: Entity | undefined, namespace?: string) {
-		this.namespace = namespace ?? NAMESPACE;
+	constructor(target: Entity | undefined) {
+		this.namespace = getPackageNamespace();
 		if (target instanceof Entity) {
 			this.target = target;
 		} else {
@@ -171,7 +171,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
 	 */
 	protected constructor(databaseName: string, target?: Entity | undefined, namespace?: string) {
-		this.mainDB = new DatabaseManager(target, namespace);
+		this.mainDB = new DatabaseManager(target);
 		this.databaseName = databaseName;
 
 		if (this.mainDB.hasJSONDatabase(this.databaseName)) {

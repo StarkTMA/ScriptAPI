@@ -2,6 +2,46 @@
 
 This package provides a small collection of TypeScript utilities. The code is split into focused modules; this README gives a short summary and points to the source files for details.
 
+## Configuration
+
+### Setting a Custom Namespace
+
+By default, this package uses the namespace `"starktma"` for internal identifiers, database keys, and event names. You can configure a custom namespace for your project to avoid conflicts with other add-ons.
+
+**Important:** The namespace should be set once at the very beginning of your application, before any other package functionality is used.
+
+```typescript
+import { setNamespace } from "@starktma/minecraft-utils/config";
+
+// Set your custom namespace early in your application
+setNamespace("myproject");
+
+// Now use other package features
+import { StateMachine } from "@starktma/minecraft-utils/game-state-machine";
+import { SimpleDatabase } from "@starktma/minecraft-utils/database";
+```
+
+The namespace affects:
+
+- Database property keys (e.g., `"myproject:playerData"` instead of `"starktma:playerData"`)
+- Game state machine event IDs (e.g., `"myproject:reset"` instead of `"starktma:reset"`)
+- Branch identifiers in the state machine
+
+### Configuration API
+
+```typescript
+import { setNamespace, getNamespace, resetNamespace } from "@starktma/minecraft-utils/config";
+
+// Set a custom namespace
+setNamespace("myproject");
+
+// Get the current namespace
+const currentNamespace = getNamespace(); // Returns "myproject"
+
+// Reset to default (primarily for testing)
+resetNamespace(); // Resets to "starktma"
+```
+
 ## Quick summary
 
 - **database** — lightweight JSON storage helpers for Minecraft's dynamic properties. Implements a `DatabaseManager` (low-level serialization/partitioning) and `SimpleDatabase` (convenience base class for storing objects by id). See `src/database` for full details and examples.
@@ -48,6 +88,15 @@ The StateMachine is still under development.
 
 ## Usage
 
+First, configure your namespace (recommended):
+
+```typescript
+import { setNamespace } from "@starktma/minecraft-utils/config";
+
+// Set your project's namespace before using other features
+setNamespace("myproject");
+```
+
 Import the StateMachine at the beginning of your server script:
 
 ```typescript
@@ -59,6 +108,13 @@ Use the provided methods to create and manage branches and levels, and to handle
 ### Example
 
 ```typescript
+// Configure namespace first
+import { setNamespace } from "@starktma/minecraft-utils/config";
+setNamespace("myproject");
+
+// Import other functionality
+import { stateMachine } from "@starktma/minecraft-utils/game-state-machine";
+
 // Create a new branch
 const myBranch = stateMachine.createBranch("myCustomBranch");
 

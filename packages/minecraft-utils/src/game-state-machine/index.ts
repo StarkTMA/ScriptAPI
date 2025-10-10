@@ -3,10 +3,10 @@ import { PlayerDatabase } from "./database";
 import { PlayerObject, playerState } from "./interfaces";
 import { Level } from "./level";
 import { Branch } from "./branch";
-import { NAMESPACE } from "../constants";
+import { getPackageNamespace } from "../constants";
 
-const RESET_EVENT = `${NAMESPACE}:reset`;
-const JUMP_EVENT = `${NAMESPACE}:jump`;
+const RESET_EVENT = `${getPackageNamespace()}:reset`;
+const JUMP_EVENT = `${getPackageNamespace()}:jump`;
 
 class StateMachineEvents {
 	public resetFunctions: (() => void)[]; // Functions to call when the state machine is reset
@@ -275,7 +275,7 @@ class StateMachine {
 	 * @returns
 	 */
 	public createBranch(name: string, activate: boolean = false): Branch {
-		const branchIdentifier = `${NAMESPACE}:${name}`;
+		const branchIdentifier = `${getPackageNamespace()}:${name}`;
 		if (this.branches.has(branchIdentifier)) {
 			throw new Error(`Branch with name ${branchIdentifier} already exists. Error at StateMachine.createBranch`);
 		}
@@ -348,7 +348,7 @@ class StateMachine {
 
 			mc.system.runInterval(() => this.eventTrigger.triggerTick());
 		});
-		
+
 		this.events.onReset(() => {
 			this.activeBranches.clear();
 			this.branches.forEach((branch) => {
