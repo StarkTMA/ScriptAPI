@@ -247,11 +247,12 @@ class StateMachine {
 	public defaultBranch: Branch | undefined = undefined;
 
 	private constructor() {
+		this.defaultBranch = this.createBranch("defaultBranch", true);
+		this.defaultBranch.addLevel("defaultLevel0", true);
+		this.playersManager = new PlayerManager();
+
 		mc.world.afterEvents.worldLoad.subscribe(() => {
-			this.playersManager = new PlayerManager();
 			mc.system.runInterval(() => this.eventTrigger.triggerTick());
-			this.defaultBranch = this.createBranch("defaultBranch", true);
-			this.defaultBranch.addLevel("defaultLevel0", true);
 		});
 
 		mc.world.afterEvents.playerSpawn.subscribe((event) => {
