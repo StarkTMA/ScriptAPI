@@ -1,4 +1,3 @@
-import { SimpleDatabase } from "./database";
-import { SimpleObject } from "./interfaces";
+import { SimpleDatabase, SimpleObject } from "./database";
 
 export { SimpleDatabase, SimpleObject };

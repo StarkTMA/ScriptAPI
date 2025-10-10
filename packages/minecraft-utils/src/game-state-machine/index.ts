@@ -313,37 +313,42 @@ class StateMachine {
 	}
 
 	private constructor() {
-		mc.world.afterEvents.playerSpawn.subscribe((event) => {
-			if (event.initialSpawn) {
-				this.playersManager.onPlayerJoinServer(event.player, { branches: this.branches, activeBranches: this.activeBranches });
-			} else {
-				this.playersManager.onPlayerRespawn(event.player, { branches: this.branches, activeBranches: this.activeBranches });
-			}
+		mc.world.afterEvents.worldLoad.subscribe(() => {
+			mc.world.afterEvents.playerSpawn.subscribe((event) => {
+				if (event.initialSpawn) {
+					this.playersManager.onPlayerJoinServer(event.player, { branches: this.branches, activeBranches: this.activeBranches });
+				} else {
+					this.playersManager.onPlayerRespawn(event.player, { branches: this.branches, activeBranches: this.activeBranches });
+				}
+			});
+
+			mc.world.beforeEvents.playerLeave.subscribe((event) => {
+				this.playersManager.onPlayerLeaveServer(event.player, { branches: this.branches, activeBranches: this.activeBranches });
+			});
+
+			mc.world.afterEvents.entityDie.subscribe(
+				(event) => {
+					this.playersManager.onPlayerDeath(event.deadEntity as mc.Player, {
+						branches: this.branches,
+						activeBranches: this.activeBranches,
+					});
+				},
+				{ entityTypes: ["minecraft:player"] }
+			);
+
+			mc.system.afterEvents.scriptEventReceive.subscribe((event) => {
+				if (event.id === RESET_EVENT) {
+					this.eventTrigger.triggerReset();
+				} else if (event.id === JUMP_EVENT) {
+					this.activeBranches.forEach((branch) => {
+						branch.jumpToLevel(event.message);
+					});
+				}
+			});
+
+			mc.system.runInterval(() => this.eventTrigger.triggerTick());
 		});
-
-		mc.world.beforeEvents.playerLeave.subscribe((event) => {
-			this.playersManager.onPlayerLeaveServer(event.player, { branches: this.branches, activeBranches: this.activeBranches });
-		});
-
-		mc.world.afterEvents.entityDie.subscribe(
-			(event) => {
-				this.playersManager.onPlayerDeath(event.deadEntity as mc.Player, { branches: this.branches, activeBranches: this.activeBranches });
-			},
-			{ entityTypes: ["minecraft:player"] }
-		);
-
-		mc.system.afterEvents.scriptEventReceive.subscribe((event) => {
-			if (event.id === RESET_EVENT) {
-				this.eventTrigger.triggerReset();
-			} else if (event.id === JUMP_EVENT) {
-				this.activeBranches.forEach((branch) => {
-					branch.jumpToLevel(event.message);
-				});
-			}
-		});
-
-		mc.system.runInterval(() => this.eventTrigger.triggerTick());
-
+		
 		this.events.onReset(() => {
 			this.activeBranches.clear();
 			this.branches.forEach((branch) => {

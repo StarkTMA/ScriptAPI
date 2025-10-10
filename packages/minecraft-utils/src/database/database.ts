@@ -11,8 +11,10 @@ class DatabaseManager {
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
 	private target: Entity | World;
+	private namespace: string;
 
-	constructor(target: Entity | undefined) {
+	constructor(target: Entity | undefined, namespace?: string) {
+		this.namespace = namespace ?? NAMESPACE;
 		if (target instanceof Entity) {
 			this.target = target;
 		} else {
@@ -27,7 +29,7 @@ class DatabaseManager {
 	 */
 	hasJSONDatabase(databaseName: string) {
 		if (!this.target) return false;
-		return this.target.getDynamicProperty(NAMESPACE + ":" + databaseName) !== undefined;
+		return this.target.getDynamicProperty(this.namespace + ":" + databaseName) !== undefined;
 	}
 
 	/**
@@ -36,8 +38,7 @@ class DatabaseManager {
 	 * @param database The data to be stored in the database.
 	 */
 	addJSONDatabase(databaseName: string, database: object) {
-		if (!this.target) return;
-		const propertyName = `${NAMESPACE}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const jsonString = JSON.stringify(database);
 		const existingProp = this.target.getDynamicProperty(propertyName) as string | undefined;
 		let existingChunks = 0;
@@ -85,7 +86,7 @@ class DatabaseManager {
 	 */
 	removeJSONDatabase(databaseName: string) {
 		if (!this.target) return;
-		const propertyName = `${NAMESPACE}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString !== undefined) {
 			try {
@@ -110,7 +111,7 @@ class DatabaseManager {
 	 */
 	getJSONDatabase(databaseName: string) {
 		if (!this.target) return;
-		const propertyName = `${NAMESPACE}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString === undefined) {
 			throw new Error("Database does not exist");
@@ -158,7 +159,7 @@ class DatabaseManager {
  * 		return MyDatabase.instance;
  * 	}
  */
-export class SimpleDatabase<T extends SimpleObject> {
+class SimpleDatabase<T extends SimpleObject> {
 	private mainDB: DatabaseManager;
 	private localDB: T[];
 
@@ -169,8 +170,8 @@ export class SimpleDatabase<T extends SimpleObject> {
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
 	 */
-	protected constructor(databaseName: string, target?: Entity | undefined) {
-		this.mainDB = new DatabaseManager(target);
+	protected constructor(databaseName: string, target?: Entity | undefined, namespace?: string) {
+		this.mainDB = new DatabaseManager(target, namespace);
 		this.databaseName = databaseName;
 
 		if (this.mainDB.hasJSONDatabase(this.databaseName)) {
@@ -271,3 +272,5 @@ export class SimpleDatabase<T extends SimpleObject> {
 		this.localDB.forEach((object, index) => callback(object, index));
 	}
 }
+
+export { SimpleDatabase, SimpleObject };
