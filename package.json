@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "npm run build --workspace=@starktma/minecraft-utils && npm run build --workspace=@starktma/game-state-machine",
+		"build": "npm run build --workspace=@starktma/minecraft-utils",
 		"package": "npm run package --workspaces --if-present",
 		"publish": "npm publish --workspaces --access public",
 		"link": "npm link --workspaces",

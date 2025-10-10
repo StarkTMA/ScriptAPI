@@ -12,16 +12,14 @@ class DatabaseManager {
 	private static readonly DYNAMIC_PROP_MAX_LENGTH = 32767;
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
-	private target: Entity | World | undefined;
+	private target: Entity | World;
 
 	constructor(target: Entity | undefined) {
-		world.afterEvents.worldLoad.subscribe(() => {
-			if (target instanceof Entity) {
-				this.target = target;
-			} else {
-				this.target = world;
-			}
-		});
+		if (target instanceof Entity) {
+			this.target = target;
+		} else {
+			this.target = world;
+		}
 	}
 
 	/**
