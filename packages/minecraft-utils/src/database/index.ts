@@ -1,3 +1,1 @@
-import { SimpleDatabase, SimpleObject } from "./database";
-
-export { SimpleDatabase, SimpleObject };
+export { SimpleDatabase, SimpleObject } from "./database";

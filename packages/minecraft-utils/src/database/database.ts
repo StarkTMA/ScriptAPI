@@ -26,8 +26,7 @@ class DatabaseManager {
 	 * @returns True if the database exists, false otherwise.
 	 */
 	hasJSONDatabase(databaseName: string) {
-		if (!this.target) return false;
-		return this.target.getDynamicProperty(getNamespace() + ":" + databaseName) !== undefined;
+		return this.target.getDynamicProperty(`${getNamespace()}:${databaseName}`) !== undefined;
 	}
 
 	/**
@@ -83,7 +82,6 @@ class DatabaseManager {
 	 * @param databaseName The name of the database.
 	 */
 	removeJSONDatabase(databaseName: string) {
-		if (!this.target) return;
 		const propertyName = `${getNamespace()}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString !== undefined) {
@@ -108,7 +106,6 @@ class DatabaseManager {
 	 * @throws An error if the database does not exist.
 	 */
 	getJSONDatabase(databaseName: string) {
-		if (!this.target) return;
 		const propertyName = `${getNamespace()}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString === undefined) {
@@ -168,7 +165,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
 	 */
-	protected constructor(databaseName: string, target?: Entity | undefined, namespace?: string) {
+	protected constructor(databaseName: string, target?: Entity | undefined) {
 		this.mainDB = new DatabaseManager(target);
 		this.databaseName = databaseName;
 
