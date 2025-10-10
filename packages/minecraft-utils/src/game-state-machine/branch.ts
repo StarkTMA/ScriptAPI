@@ -1,7 +1,7 @@
 import { BranchDatabase } from "./database";
 import { Level } from "./level";
 import { levelState } from "./interfaces";
-import { NAMESPACE } from "./constants";
+import { NAMESPACE } from "../constants";
 
 class BranchManager {
 	protected branchDatabase: BranchDatabase = BranchDatabase.getInstance();

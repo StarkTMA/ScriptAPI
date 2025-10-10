@@ -1,8 +1,6 @@
 import { Entity, world, World } from "@minecraft/server";
 import { SimpleObject } from "./interfaces";
-
-//@ts-ignore
-import { NAMESPACE } from "./constants";
+import { NAMESPACE } from "../constants";
 
 /**
  * DatabaseManager is a class that manages databases stored in Minecraft's world properties.
