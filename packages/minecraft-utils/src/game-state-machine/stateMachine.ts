@@ -396,4 +396,7 @@ class StateMachine {
 	}
 }
 
-export { StateMachine };
+type levelType = typeof Level;
+type branchType = typeof Branch;
+
+export { StateMachine, levelType, branchType };
