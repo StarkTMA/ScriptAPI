@@ -1,6 +1,6 @@
 import { Entity, world, World } from "@minecraft/server";
 import { SimpleObject } from "./interfaces";
-import { getPackageNamespace } from "../constants";
+import { getNamespace } from "../constants";
 
 /**
  * DatabaseManager is a class that manages databases stored in Minecraft's world properties.
@@ -11,10 +11,8 @@ class DatabaseManager {
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
 	private target: Entity | World;
-	private namespace: string;
 
 	constructor(target: Entity | undefined) {
-		this.namespace = getPackageNamespace();
 		if (target instanceof Entity) {
 			this.target = target;
 		} else {
@@ -29,7 +27,7 @@ class DatabaseManager {
 	 */
 	hasJSONDatabase(databaseName: string) {
 		if (!this.target) return false;
-		return this.target.getDynamicProperty(this.namespace + ":" + databaseName) !== undefined;
+		return this.target.getDynamicProperty(getNamespace() + ":" + databaseName) !== undefined;
 	}
 
 	/**
@@ -38,7 +36,7 @@ class DatabaseManager {
 	 * @param database The data to be stored in the database.
 	 */
 	addJSONDatabase(databaseName: string, database: object) {
-		const propertyName = `${this.namespace}:${databaseName}`;
+		const propertyName = `${getNamespace()}:${databaseName}`;
 		const jsonString = JSON.stringify(database);
 		const existingProp = this.target.getDynamicProperty(propertyName) as string | undefined;
 		let existingChunks = 0;
@@ -86,7 +84,7 @@ class DatabaseManager {
 	 */
 	removeJSONDatabase(databaseName: string) {
 		if (!this.target) return;
-		const propertyName = `${this.namespace}:${databaseName}`;
+		const propertyName = `${getNamespace()}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString !== undefined) {
 			try {
@@ -111,7 +109,7 @@ class DatabaseManager {
 	 */
 	getJSONDatabase(databaseName: string) {
 		if (!this.target) return;
-		const propertyName = `${this.namespace}:${databaseName}`;
+		const propertyName = `${getNamespace()}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString === undefined) {
 			throw new Error("Database does not exist");

@@ -1,7 +1,7 @@
 import { BranchDatabase } from "./database";
 import { Level } from "./level";
 import { levelState } from "./interfaces";
-import { getPackageNamespace } from "../constants";
+import { getNamespace } from "../constants";
 
 class BranchManager {
 	protected branchDatabase: BranchDatabase = BranchDatabase.getInstance();
@@ -50,7 +50,7 @@ class BranchManager {
 	}
 
 	constructor(name: string) {
-		this.identifier = `${getPackageNamespace()}:${name}`;
+		this.identifier = `${getNamespace()}:${name}`;
 		this.getBranchState();
 	}
 }
