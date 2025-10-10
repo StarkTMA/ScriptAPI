@@ -393,3 +393,5 @@ class StateMachine {
 		return StateMachine.instance;
 	}
 }
+
+export { StateMachine };

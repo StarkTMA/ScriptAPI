@@ -1,3 +1,3 @@
-import { stateMachine, mainBranch, mainLevel0 } from "./stateMachine";
+import { StateMachine } from "./stateMachine";
 
-export { stateMachine, mainBranch, mainLevel0 };
+export { StateMachine };
