@@ -180,12 +180,11 @@ class DatabaseManager {
  */
 class SimpleDatabase<T extends SimpleObject> {
 	private mainDB: DatabaseManager;
-	private localDB: T[];
 
 	protected databaseName: string;
 
 	/**
-	 * The constructor initializes the local database and syncs it with the main database.
+	 * The constructor initializes the database manager.
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
 	 * @param namespace The namespace to use for the database. If undefined, the global namespace is used.
@@ -194,21 +193,19 @@ class SimpleDatabase<T extends SimpleObject> {
 		this.mainDB = new DatabaseManager(target, namespace);
 		this.databaseName = databaseName;
 
-		if (this.mainDB.hasJSONDatabase(this.databaseName)) {
-			this.localDB = this.getMainDB();
-		} else {
-			this.localDB = [];
-			this.updateMainDB();
+		// Initialize the database if it doesn't exist
+		if (!this.mainDB.hasJSONDatabase(this.databaseName)) {
+			this.mainDB.addJSONDatabase(this.databaseName, []);
 		}
 	}
 
 	/**
-	 * Updates the main database with the local database.
+	 * Updates the main database with the provided data.
 	 * This method is called automatically when an object is added, updated or removed.
 	 * @private
 	 */
-	private updateMainDB() {
-		this.mainDB.addJSONDatabase(this.databaseName, this.localDB);
+	private updateMainDB(data: T[]) {
+		this.mainDB.addJSONDatabase(this.databaseName, data);
 	}
 
 	/**
@@ -216,21 +213,27 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @private
 	 * @returns The main database.
 	 */
-	private getMainDB() {
-		return this.mainDB.getJSONDatabase(this.databaseName);
+	private getMainDB(): T[] {
+		try {
+			return this.mainDB.getJSONDatabase(this.databaseName) as T[];
+		} catch {
+			// If database doesn't exist or is corrupted, return empty array
+			return [];
+		}
 	}
 
 	/**
-	 * Adds an object to the local database and updates the main database.
+	 * Adds an object to the database.
 	 * @param object The object to be added.
 	 */
 	addObject(object: T): void {
-		this.localDB.push(object);
-		this.updateMainDB();
+		const currentData = this.getMainDB();
+		currentData.push(object);
+		this.updateMainDB(currentData);
 	}
 
 	/**
-	 * Updates an object in the local database and the main database.
+	 * Updates an object in the database.
 	 * If the object does not exist, it is added.
 	 * @param object The object to be updated.
 	 */
@@ -242,54 +245,57 @@ class SimpleDatabase<T extends SimpleObject> {
 	}
 
 	/**
-	 * Checks if an object with the given id exists in the local database.
+	 * Checks if an object with the given id exists in the database.
 	 * @param id The id of the object.
 	 * @returns True if the object exists, false otherwise.
 	 */
 	hasObject(id: string): boolean {
-		return this.localDB.map((object) => object.id).includes(id);
+		const currentData = this.getMainDB();
+		return currentData.map((object: T) => object.id).includes(id);
 	}
 
 	/**
-	 * Retrieves an object with the given id from the local database.
+	 * Retrieves an object with the given id from the database.
 	 * @param id The id of the object.
 	 * @returns The object if it exists, undefined otherwise.
 	 */
 	getObject(id: string): T | undefined {
-		return this.localDB.filter((object) => object.id === id)[0];
+		const currentData = this.getMainDB();
+		return currentData.filter((object: T) => object.id === id)[0];
 	}
 
 	/**
-	 * Removes an object with the given id from the local database and updates the main database.
+	 * Removes an object with the given id from the database.
 	 * @param id The id of the object.
 	 */
 	removeObject(id: string): void {
-		this.localDB = this.localDB.filter((object) => object.id !== id);
-		this.updateMainDB();
+		const currentData = this.getMainDB();
+		const updatedData = currentData.filter((object: T) => object.id !== id);
+		this.updateMainDB(updatedData);
 	}
 
 	/**
-	 * Retrieves all objects from the local database.
-	 * @returns An array of all objects in the local database.
+	 * Retrieves all objects from the database.
+	 * @returns An array of all objects in the database.
 	 */
 	getAllObjects(): T[] {
-		return this.localDB;
+		return this.getMainDB();
 	}
 
 	/**
-	 * Removes all objects from the local database and updates the main database.
+	 * Removes all objects from the database.
 	 */
 	eraseAllObjects(): void {
-		this.localDB = [];
-		this.updateMainDB();
+		this.updateMainDB([]);
 	}
 
 	/**
-	 * Iterates over all objects in the local database.
+	 * Iterates over all objects in the database.
 	 * @param callback The function to be called for each object.
 	 */
-	forEach(callback: (object: SimpleObject, index: number) => void): void {
-		this.localDB.forEach((object, index) => callback(object, index));
+	forEach(callback: (object: T, index: number) => void): void {
+		const currentData = this.getMainDB();
+		currentData.forEach((object: T, index: number) => callback(object, index));
 	}
 }
 
