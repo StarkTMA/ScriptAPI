@@ -11,13 +11,20 @@ class DatabaseManager {
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
 	private target: Entity | World;
+	private namespace: string;
 
-	constructor(target: Entity | undefined) {
+	/**
+	 * Creates a new DatabaseManager instance.
+	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
+	 * @param namespace The namespace to use for the database. If undefined, the global namespace is used.
+	 */
+	constructor(target: Entity | undefined, namespace?: string) {
 		if (target instanceof Entity) {
 			this.target = target;
 		} else {
 			this.target = world;
 		}
+		this.namespace = namespace || getNamespace();
 	}
 
 	/**
@@ -26,7 +33,7 @@ class DatabaseManager {
 	 * @returns True if the database exists, false otherwise.
 	 */
 	hasJSONDatabase(databaseName: string) {
-		return this.target.getDynamicProperty(`${getNamespace()}:${databaseName}`) !== undefined;
+		return this.target.getDynamicProperty(`${this.namespace}:${databaseName}`) !== undefined;
 	}
 
 	/**
@@ -35,7 +42,7 @@ class DatabaseManager {
 	 * @param database The data to be stored in the database.
 	 */
 	addJSONDatabase(databaseName: string, database: object) {
-		const propertyName = `${getNamespace()}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const jsonString = JSON.stringify(database);
 		const existingProp = this.target.getDynamicProperty(propertyName) as string | undefined;
 		let existingChunks = 0;
@@ -82,7 +89,7 @@ class DatabaseManager {
 	 * @param databaseName The name of the database.
 	 */
 	removeJSONDatabase(databaseName: string) {
-		const propertyName = `${getNamespace()}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString !== undefined) {
 			try {
@@ -106,7 +113,7 @@ class DatabaseManager {
 	 * @throws An error if the database does not exist.
 	 */
 	getJSONDatabase(databaseName: string) {
-		const propertyName = `${getNamespace()}:${databaseName}`;
+		const propertyName = `${this.namespace}:${databaseName}`;
 		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
 		if (propString === undefined) {
 			throw new Error("Database does not exist");
@@ -153,6 +160,23 @@ class DatabaseManager {
  * 		}
  * 		return MyDatabase.instance;
  * 	}
+ * }
+ *
+ * @example
+ * // Using a custom namespace
+ * class MyCustomDatabase extends SimpleDatabase<PlayerObject> {
+ * 	protected static instance: MyCustomDatabase;
+ * 	constructor() {
+ * 		super("myDatabase", undefined, "customnamespace");
+ * 	}
+ *
+ * 	static getInstance(): MyCustomDatabase {
+ * 		if (!MyCustomDatabase.instance) {
+ * 			MyCustomDatabase.instance = new MyCustomDatabase();
+ * 		}
+ * 		return MyCustomDatabase.instance;
+ * 	}
+ * }
  */
 class SimpleDatabase<T extends SimpleObject> {
 	private mainDB: DatabaseManager;
@@ -164,9 +188,10 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * The constructor initializes the local database and syncs it with the main database.
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
+	 * @param namespace The namespace to use for the database. If undefined, the global namespace is used.
 	 */
-	protected constructor(databaseName: string, target?: Entity | undefined) {
-		this.mainDB = new DatabaseManager(target);
+	protected constructor(databaseName: string, target?: Entity | undefined, namespace?: string) {
+		this.mainDB = new DatabaseManager(target, namespace);
 		this.databaseName = databaseName;
 
 		if (this.mainDB.hasJSONDatabase(this.databaseName)) {
