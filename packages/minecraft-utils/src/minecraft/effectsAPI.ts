@@ -1,13 +1,34 @@
 import { Entity, MolangVariableMap, Player, RGBA, system, world } from "@minecraft/server";
 import { MinecraftItemTypes } from "@minecraft/vanilla-data";
-import { SimpleObject, SimpleDatabase } from "@starktma/minecraft-utils/database";
+import { SimpleDatabase } from "@starktma/minecraft-utils/database";
+import { getNamespace } from "../constants";
 
-interface EffectObject extends SimpleObject {
+interface EffectObject {
+	id: string;
 	entityId: string;
 	effectType: string;
 	amplifier: number;
 	duration: number;
 	color: RGBA;
+}
+
+interface EntityTracker {
+	id: string;
+}
+
+class EffectEntityDatabase extends SimpleDatabase<EntityTracker> {
+	private static instance: EffectEntityDatabase;
+
+	private constructor() {
+		super("effect_entities");
+	}
+
+	static getInstance(): EffectEntityDatabase {
+		if (!EffectEntityDatabase.instance) {
+			EffectEntityDatabase.instance = new EffectEntityDatabase();
+		}
+		return EffectEntityDatabase.instance;
+	}
 }
 
 interface EffectSounds {
@@ -26,24 +47,9 @@ interface EffectConfig {
 
 type EffectHandler = (entity: Entity, effect: EffectObject) => void;
 
-class EffectDatabase extends SimpleDatabase<EffectObject> {
-	private static instance: EffectDatabase;
-
-	private constructor() {
-		super("effect_effects", undefined);
-	}
-
-	static getInstance(): EffectDatabase {
-		if (!EffectDatabase.instance) {
-			EffectDatabase.instance = new EffectDatabase();
-		}
-		return EffectDatabase.instance;
-	}
-}
-
 class EffectManager {
-	private database: EffectDatabase | null = null;
 	private configs = new Map<string, EffectConfig>();
+	private entityDB: EffectEntityDatabase | null = null;
 	static instance: EffectManager;
 
 	static getInstance(): EffectManager {
@@ -55,11 +61,116 @@ class EffectManager {
 
 	private constructor() {}
 
-	private getDatabase(): EffectDatabase {
-		if (!this.database) {
-			this.database = EffectDatabase.getInstance();
+	private getEntityDatabase(): EffectEntityDatabase {
+		if (!this.entityDB) {
+			this.entityDB = EffectEntityDatabase.getInstance();
 		}
-		return this.database;
+		return this.entityDB;
+	}
+
+	/**
+	 * Track an entity as having effects
+	 * @param entity - The entity to track
+	 */
+	private trackEntity(entity: Entity): void {
+		const db = this.getEntityDatabase();
+		const tracker: EntityTracker = {
+			id: entity.id,
+		};
+
+		if (!db.hasObject(entity.id)) {
+			db.addObject(tracker);
+		}
+	}
+
+	/**
+	 * Stop tracking an entity (when it has no more effects)
+	 * @param entity - The entity to stop tracking
+	 */
+	private untrackEntity(entity: Entity): void {
+		const db = this.getEntityDatabase();
+		if (db.hasObject(entity.id)) {
+			db.removeObject(entity.id);
+		}
+	}
+
+	/**
+	 * Check if an entity has any effect tags
+	 * @param entity - The entity to check
+	 * @returns True if entity has any effect tags
+	 */
+	private entityHasEffectTags(entity: Entity): boolean {
+		return entity.getTags().some((tag) => tag.includes("starkteffects"));
+	}
+
+	/**
+	 * Parse effect data from entity tags regardless of namespace
+	 * @param entity - The entity to get effects from
+	 * @returns Array of effect objects parsed from all effect tags
+	 */
+	private getEffectsFromTags(entity: Entity): EffectObject[] {
+		return entity
+			.getTags()
+			.filter((tag) => tag.includes("starkteffects"))
+			.map((tag) => {
+				const parts = tag.split("_");
+				if (parts.length < 4) return null;
+
+				// Find the namespace and effects parts
+				const effectsIndex = parts.findIndex((part) => part === "starkteffects");
+				if (effectsIndex === -1 || effectsIndex === 0 || effectsIndex >= parts.length - 2) return null;
+
+				const namespace = parts.slice(0, effectsIndex).join("_");
+				const effectType = parts.slice(effectsIndex + 1, -2).join("_");
+				const amplifier = parseInt(parts[parts.length - 2]);
+				const duration = parseInt(parts[parts.length - 1]);
+				const config = this.configs.get(effectType);
+
+				return {
+					id: `${entity.id}_${effectType}`,
+					entityId: entity.id,
+					effectType,
+					amplifier,
+					duration,
+					color: config?.color || { red: 1, green: 1, blue: 1, alpha: 1 },
+				};
+			})
+			.filter((effect) => effect !== null) as EffectObject[];
+	}
+
+	/**
+	 * Parse ALL effect data from entity tags regardless of namespace
+	 * @param entity - The entity to get effects from
+	 * @returns Array of effect objects parsed from all effect tags
+	 */
+	private getAllEffectsFromTags(entity: Entity): EffectObject[] {
+		return entity
+			.getTags()
+			.filter((tag) => tag.includes("starkteffects"))
+			.map((tag) => {
+				const parts = tag.split("_");
+				if (parts.length < 4) return null;
+
+				// Find the namespace and effects parts
+				const effectsIndex = parts.findIndex((part) => part === "starkteffects");
+				if (effectsIndex === -1 || effectsIndex === 0 || effectsIndex >= parts.length - 2) return null;
+
+				const namespace = parts.slice(0, effectsIndex).join("_");
+				const effectType = parts.slice(effectsIndex + 1, -2).join("_");
+				const amplifier = parseInt(parts[parts.length - 2]);
+				const duration = parseInt(parts[parts.length - 1]);
+				const config = this.configs.get(effectType);
+
+				return {
+					id: `${entity.id}_${effectType}`,
+					entityId: entity.id,
+					effectType,
+					amplifier,
+					duration,
+					color: config?.color || { red: 1, green: 1, blue: 1, alpha: 1 },
+				};
+			})
+			.filter((effect) => effect !== null) as EffectObject[];
 	}
 
 	/**
@@ -82,33 +193,32 @@ class EffectManager {
 	}
 
 	addEffect(entity: Entity, effectType: string, amplifier: number, duration: number): void {
-		const db = this.getDatabase();
-		const effectId = `${entity.id}_${effectType}`;
-
 		// Get config if registered
 		const config = this.configs.get(effectType);
+		const currentNamespace = getNamespace();
 
-		// Use color from config if not provided
-		const effectColor = config?.color || { red: 1, green: 1, blue: 1, alpha: 1 };
+		// Find existing effect from tags
+		const existingTag = entity
+			.getTags()
+			.find((tag) => tag.startsWith(`${currentNamespace}_starkteffects_${effectType}_`));
 
-		// Find existing effect
-		const existing = db.getAllObjects().find((e) => e.entityId === entity.id && e.effectType === effectType);
+		if (existingTag) {
+			// Parse existing effect
+			const parts = existingTag.split("_");
+			if (parts.length >= 4) {
+				const existingAmplifier = parseInt(parts[parts.length - 2]);
+				const existingDuration = parseInt(parts[parts.length - 1]);
 
-		const isNewEffect = !existing;
-		const newEffect: EffectObject = {
-			id: effectId,
-			entityId: entity.id,
-			effectType,
-			amplifier,
-			duration: duration * 20,
-			color: effectColor,
-		};
-
-		if (!existing) {
-			db.addObject(newEffect);
-
-			// Add effect tag
-			entity.addTag(`starktma_effects_${effectType}_${amplifier}_${duration * 20}`);
+				// Update if stronger or longer
+				if (amplifier > existingAmplifier || (amplifier === existingAmplifier && duration * 20 > existingDuration)) {
+					// Remove old tag and add new one
+					entity.removeTag(existingTag);
+					entity.addTag(`${currentNamespace}_starkteffects_${effectType}_${amplifier}_${duration * 20}`);
+				}
+			}
+		} else {
+			// New effect - add tag
+			entity.addTag(`${currentNamespace}_starkteffects_${effectType}_${amplifier}_${duration * 20}`);
 
 			// Play start sound if configured
 			if (config?.sounds?.start) {
@@ -116,35 +226,21 @@ class EffectManager {
 					entity.dimension.playSound(config.sounds.start, entity.location);
 				} catch (error) {}
 			}
-		} else {
-			// Update if stronger or longer
-			if (existing.amplifier <= newEffect.amplifier) {
-				if (existing.amplifier < newEffect.amplifier || existing.duration < newEffect.duration) {
-					// Remove old tag
-					entity
-						.getTags()
-						.filter((tag) => tag.startsWith(`starktma_effects_${effectType}_`))
-						.forEach((tag) => {
-							entity.removeTag(tag);
-						});
-
-					// Update database
-					existing.amplifier = newEffect.amplifier;
-					existing.duration = newEffect.duration;
-					existing.color = newEffect.color;
-					db.updateObject(existing);
-
-					// Add new tag
-					entity.addTag(`starktma_effects_${effectType}_${existing.amplifier}_${existing.duration}`);
-				}
-			}
 		}
+
+		// Track this entity as having effects
+		this.trackEntity(entity);
 	}
 
 	removeEffect(entity: Entity, effectType: string): void {
-		const db = this.getDatabase();
-		const effect = db.getAllObjects().find((e) => e.entityId === entity.id && e.effectType === effectType);
-		if (effect) {
+		const currentNamespace = getNamespace();
+
+		// Find and remove effect tags
+		const effectTags = entity
+			.getTags()
+			.filter((tag) => tag.startsWith(`${currentNamespace}_starkteffects_${effectType}_`));
+
+		if (effectTags.length > 0) {
 			// Play end sound if configured
 			const config = this.configs.get(effectType);
 			if (config?.sounds?.end) {
@@ -153,52 +249,108 @@ class EffectManager {
 				} catch (error) {}
 			}
 
-			// Remove from database
-			db.removeObject(effect.id);
-
 			// Remove effect tags
-			entity
-				.getTags()
-				.filter((tag) => tag.startsWith(`starktma_effects_${effectType}_`))
-				.forEach((tag) => {
-					entity.removeTag(tag);
-				});
+			effectTags.forEach((tag) => {
+				entity.removeTag(tag);
+			});
+
+			// Check if entity still has any effects, untrack if not
+			if (!this.entityHasEffectTags(entity)) {
+				this.untrackEntity(entity);
+			}
 		}
 	}
 
 	removeAllEffects(entity: Entity): void {
-		const db = this.getDatabase();
-		const effects = db.getAllObjects().filter((e) => e.entityId === entity.id);
-		effects.forEach((effect) => {
-			// Play end sound if configured
-			const config = this.configs.get(effect.effectType);
+		const currentNamespace = getNamespace();
+
+		// Get all effect tags
+		const effectTags = entity.getTags().filter((tag) => tag.startsWith(`${currentNamespace}_starkteffects_`));
+
+		// Play end sounds for each effect type
+		const effectTypes = new Set<string>();
+		effectTags.forEach((tag) => {
+			const parts = tag.split("_");
+			if (parts.length >= 4) {
+				const effectType = parts.slice(2, -2).join("_");
+				effectTypes.add(effectType);
+			}
+		});
+
+		effectTypes.forEach((effectType) => {
+			const config = this.configs.get(effectType);
 			if (config?.sounds?.end) {
 				try {
 					entity.dimension.playSound(config.sounds.end, entity.location);
 				} catch (error) {}
 			}
-
-			// Remove from database
-			db.removeObject(effect.id);
 		});
 
-		// Remove all effect tags for this entity
-		entity
-			.getTags()
-			.filter((tag) => tag.startsWith("starktma_effects_"))
-			.forEach((tag) => {
-				entity.removeTag(tag);
-			});
+		// Remove all effect tags
+		effectTags.forEach((tag) => {
+			entity.removeTag(tag);
+		});
+
+		// Untrack this entity since it has no more effects
+		this.untrackEntity(entity);
+	}
+
+	extendEffect(entity: Entity, effectType: string, additionalDuration: number): boolean {
+		// Debug: Show all tags on the entity
+		const allTags = entity.getTags();
+
+		// Find effect tags of any namespace
+		const effectTags = entity.getTags().filter((tag) => {
+			// Tag format: {namespace}_starkteffects_{effectType}_{amplifier}_{duration}
+			// We need to find the "_starkteffects_" marker and work from there
+			const effectsIndex = tag.indexOf("_starkteffects_");
+			if (effectsIndex === -1) return false;
+
+			// Extract parts after "_starkteffects_"
+			const afterEffects = tag.substring(effectsIndex + 15); // 15 = "_starkteffects_".length
+			const parts = afterEffects.split("_");
+
+			// Need at least 3 parts: effectType, amplifier, duration
+			// But effectType might contain underscores, so amplifier and duration are the last 2 parts
+			if (parts.length < 3) return false;
+
+			// Extract effect type (everything except the last 2 parts which are amplifier and duration)
+			const tagEffectType = parts.slice(0, -2).join("_");
+
+			return tagEffectType === effectType;
+		});
+
+		if (effectTags.length === 0) return false;
+
+		// For each matching effect tag, extend its duration
+		effectTags.forEach((tag) => {
+			// Tag format: {namespace}_starkteffects_{effectType}_{amplifier}_{duration}
+			const effectsIndex = tag.indexOf("_starkteffects_");
+			const namespace = tag.substring(0, effectsIndex);
+
+			const afterEffects = tag.substring(effectsIndex + 15); // 15 = "_starkteffects_".length
+			const parts = afterEffects.split("_");
+
+			// Last two parts are always amplifier and duration
+			const amplifier = parseInt(parts[parts.length - 2]);
+			const currentDuration = parseInt(parts[parts.length - 1]);
+			const newDuration = currentDuration + additionalDuration;
+
+			// Remove old tag and add new one with extended duration
+			entity.removeTag(tag);
+			const newTag = `${namespace}_starkteffects_${effectType}_${amplifier}_${newDuration}`;
+			entity.addTag(newTag);
+		});
+		return true;
 	}
 
 	hasEffect(entity: Entity, effectType: string): boolean {
-		const db = this.getDatabase();
-		return db.getAllObjects().some((e) => e.entityId === entity.id && e.effectType === effectType);
+		const currentNamespace = getNamespace();
+		return entity.getTags().some((tag) => tag.startsWith(`${currentNamespace}_starkteffects_${effectType}_`));
 	}
 
 	getEffects(entity: Entity): EffectObject[] {
-		const db = this.getDatabase();
-		return db.getAllObjects().filter((e) => e.entityId === entity.id);
+		return this.getAllEffectsFromTags(entity);
 	}
 
 	/**
@@ -211,8 +363,9 @@ class EffectManager {
 			return;
 		}
 
+		const currentNamespace = getNamespace();
 		// Get effects from tags instead of database
-		const effectTags = entity.getTags().filter((tag) => tag.startsWith("starktma_effects_"));
+		const effectTags = entity.getTags().filter((tag) => tag.includes(`starkteffects`));
 
 		if (effectTags.length === 0) {
 			entity.onScreenDisplay.setActionBar("§8[§7Effects§8] §7No active effects");
@@ -222,7 +375,7 @@ class EffectManager {
 		// Parse effect data from tags
 		const effects = effectTags
 			.map((tag) => {
-				// Format: starktma_effects_${effectType}_${amplifier}_${duration}
+				// Format: namespace_starkteffects_${effectType}_${amplifier}_${duration}
 				const parts = tag.split("_");
 				if (parts.length < 4) return null;
 
@@ -263,10 +416,7 @@ class EffectManager {
 			}
 
 			// Format effect name with proper capitalization
-			const effectName = effect.effectType
-				.split("_")
-				.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-				.join(" ");
+			const effectName = effect.effectType.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1))[1];
 
 			// Format amplifier with Roman numerals for style
 			const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
@@ -288,75 +438,89 @@ class EffectManager {
 		if (!EffectManager.instance) return;
 
 		system.runInterval(() => {
-			const db = this.getDatabase();
+			const entityDB = this.getEntityDatabase();
+			const trackedEntityIds = entityDB.getAllObjects();
 
-			for (const effect of db.getAllObjects()) {
-				const entity = world.getEntity(effect.entityId);
+			for (const tracker of trackedEntityIds) {
+				const entity = world.getEntity(tracker.id);
+
+				// If entity doesn't exist, clean up tracking
 				if (!entity) continue;
+
+				// Check if entity still has effect tags (cleanup orphaned tracking)
+				if (!this.entityHasEffectTags(entity)) {
+					entityDB.removeObject(tracker.id);
+					continue;
+				}
+
 				this.debugShowEffects(entity);
-				// Get config for this effect
-				const config = this.configs.get(effect.effectType);
 
-				// Display effect info
-				const seconds = effect.duration / 20;
+				const effects = this.getEffectsFromTags(entity).filter((effect) => {
+					// Only process effects from current namespace
+					const currentNamespace = getNamespace();
+					return entity
+						.getTags()
+						.some((tag) => tag.startsWith(`${currentNamespace}_starkteffects_${effect.effectType}_`));
+				});
 
-				// Apply effect handler
-				if (config?.handler) {
-					config.handler(entity, effect);
-				}
+				for (const effect of effects) {
+					// Get config for this effect
+					const config = this.configs.get(effect.effectType);
 
-				// Play ambient sound periodically (every 2 seconds)
-				if (config?.sounds?.ambient && system.currentTick % 40 === 0) {
-					try {
-						entity.dimension.playSound(config.sounds.ambient, entity.location, { volume: 0.5 });
-					} catch (error) {}
-				}
+					// Apply effect handler
+					if (config?.handler) {
+						config.handler(entity, effect);
+					}
 
-				// Spawn particles
-				if (system.currentTick % 2 === 0) {
-					const particleLocation = entity.location;
-					particleLocation.y++;
-					const variables = new MolangVariableMap();
-					variables.setColorRGBA("color", effect.color);
-
-					const particleType = config?.particleType || "minecraft:mobspell_emitter";
-					try {
-						entity.dimension.spawnParticle(particleType, particleLocation, variables);
-					} catch (error) {}
-				}
-
-				// Update duration
-				effect.duration--;
-				if (effect.duration <= 0) {
-					// Play end sound when effect expires naturally
-					if (config?.sounds?.end) {
+					// Play ambient sound periodically (every 2 seconds)
+					if (config?.sounds?.ambient && system.currentTick % 40 === 0) {
 						try {
-							entity.dimension.playSound(config.sounds.end, entity.location);
+							entity.dimension.playSound(config.sounds.ambient, entity.location, { volume: 0.5 });
 						} catch (error) {}
 					}
 
-					// Remove from database
-					db.removeObject(effect.id);
+					// Spawn particles
+					if (system.currentTick % 2 === 0) {
+						const particleLocation = entity.location;
+						particleLocation.y++;
+						const variables = new MolangVariableMap();
+						variables.setColorRGBA("color", effect.color);
 
-					// Remove effect tags
-					entity
-						.getTags()
-						.filter((tag) => tag.startsWith(`starktma_effects_${effect.effectType}_`))
-						.forEach((tag) => {
-							entity.removeTag(tag);
-						});
-				} else {
-					// Update database
-					db.updateObject(effect);
+						const particleType = config?.particleType || "minecraft:mobspell_emitter";
+						try {
+							entity.dimension.spawnParticle(particleType, particleLocation, variables);
+						} catch (error) {}
+					}
 
-					// Update effect tags
-					entity
-						.getTags()
-						.filter((tag) => tag.startsWith(`starktma_effects_${effect.effectType}_`))
-						.forEach((tag) => {
-							entity.removeTag(tag);
-						});
-					entity.addTag(`starktma_effects_${effect.effectType}_${effect.amplifier}_${effect.duration}`);
+					// Update duration
+					const newDuration = effect.duration - 1;
+
+					if (newDuration <= 0) {
+						// Play end sound when effect expires naturally
+						if (config?.sounds?.end) {
+							try {
+								entity.dimension.playSound(config.sounds.end, entity.location);
+							} catch (error) {}
+						}
+
+						// Remove expired effect tag
+						const currentNamespace = getNamespace();
+						entity.removeTag(
+							`${currentNamespace}_starkteffects_${effect.effectType}_${effect.amplifier}_${effect.duration}`
+						);
+					} else {
+						// Update tag with new duration
+						const currentNamespace = getNamespace();
+						entity.removeTag(
+							`${currentNamespace}_starkteffects_${effect.effectType}_${effect.amplifier}_${effect.duration}`
+						);
+						entity.addTag(`${currentNamespace}_starkteffects_${effect.effectType}_${effect.amplifier}_${newDuration}`);
+					}
+				}
+
+				// Clean up tracking if entity has no more effects
+				if (!this.entityHasEffectTags(entity)) {
+					entityDB.removeObject(tracker.id);
 				}
 			}
 		});
