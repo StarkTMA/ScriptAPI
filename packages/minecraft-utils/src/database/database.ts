@@ -11,20 +11,13 @@ class DatabaseManager {
 	private static readonly CHUNK_KEY = "__SPLIT__";
 
 	private target: Entity | World;
-	private namespace: string;
 
-	/**
-	 * Creates a new DatabaseManager instance.
-	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
-	 * @param namespace The namespace to use for the database. If undefined, the global namespace is used.
-	 */
-	constructor(target: Entity | undefined, namespace?: string) {
+	constructor(target: Entity | undefined) {
 		if (target instanceof Entity) {
 			this.target = target;
 		} else {
 			this.target = world;
 		}
-		this.namespace = namespace || getNamespace();
 	}
 
 	/**
@@ -33,7 +26,7 @@ class DatabaseManager {
 	 * @returns True if the database exists, false otherwise.
 	 */
 	hasJSONDatabase(databaseName: string) {
-		return this.target.getDynamicProperty(`${this.namespace}:${databaseName}`) !== undefined;
+		return this.target.getDynamicProperty(databaseName) !== undefined;
 	}
 
 	/**
@@ -42,9 +35,8 @@ class DatabaseManager {
 	 * @param database The data to be stored in the database.
 	 */
 	addJSONDatabase(databaseName: string, database: object) {
-		const propertyName = `${this.namespace}:${databaseName}`;
 		const jsonString = JSON.stringify(database);
-		const existingProp = this.target.getDynamicProperty(propertyName) as string | undefined;
+		const existingProp = this.target.getDynamicProperty(databaseName) as string | undefined;
 		let existingChunks = 0;
 
 		if (existingProp) {
@@ -58,17 +50,17 @@ class DatabaseManager {
 		if (jsonString.length <= DatabaseManager.DYNAMIC_PROP_MAX_LENGTH || jsonString.length === 0) {
 			if (existingChunks > 0) {
 				for (let i = 0; i < existingChunks; i++) {
-					const partName = `${propertyName}_${i}`;
+					const partName = `${databaseName}_${i}`;
 					this.target.setDynamicProperty(partName, undefined);
 				}
 			}
-			this.target.setDynamicProperty(propertyName, jsonString);
+			this.target.setDynamicProperty(databaseName, jsonString);
 		} else {
 			const chunkSize = DatabaseManager.DYNAMIC_PROP_MAX_LENGTH;
 			const chunkCount = Math.ceil(jsonString.length / chunkSize);
 			if (existingChunks > 0) {
 				for (let i = 0; i < existingChunks; i++) {
-					const oldPartName = `${propertyName}_${i}`;
+					const oldPartName = `${databaseName}_${i}`;
 					this.target.setDynamicProperty(oldPartName, undefined);
 				}
 			}
@@ -76,11 +68,11 @@ class DatabaseManager {
 				const start = i * chunkSize;
 				const end = start + chunkSize;
 				const chunk = jsonString.slice(start, end);
-				const partName = `${propertyName}_${i}`;
+				const partName = `${databaseName}_${i}`;
 				this.target.setDynamicProperty(partName, chunk);
 			}
 			const meta = { [DatabaseManager.CHUNK_KEY]: chunkCount };
-			this.target.setDynamicProperty(propertyName, JSON.stringify(meta));
+			this.target.setDynamicProperty(databaseName, JSON.stringify(meta));
 		}
 	}
 
@@ -89,20 +81,19 @@ class DatabaseManager {
 	 * @param databaseName The name of the database.
 	 */
 	removeJSONDatabase(databaseName: string) {
-		const propertyName = `${this.namespace}:${databaseName}`;
-		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
+		const propString = this.target.getDynamicProperty(databaseName) as string | undefined;
 		if (propString !== undefined) {
 			try {
 				const propObj = JSON.parse(propString);
 				if (propObj && typeof propObj === "object" && DatabaseManager.CHUNK_KEY in propObj) {
 					const chunkCount = propObj[DatabaseManager.CHUNK_KEY];
 					for (let i = 0; i < chunkCount; i++) {
-						const partName = `${propertyName}_${i}`;
+						const partName = `${databaseName}_${i}`;
 						this.target.setDynamicProperty(partName, undefined);
 					}
 				}
 			} catch {}
-			this.target.setDynamicProperty(propertyName, undefined);
+			this.target.setDynamicProperty(databaseName, undefined);
 		}
 	}
 
@@ -113,8 +104,7 @@ class DatabaseManager {
 	 * @throws An error if the database does not exist.
 	 */
 	getJSONDatabase(databaseName: string) {
-		const propertyName = `${this.namespace}:${databaseName}`;
-		const propString = this.target.getDynamicProperty(propertyName) as string | undefined;
+		const propString = this.target.getDynamicProperty(databaseName) as string | undefined;
 		if (propString === undefined) {
 			throw new Error("Database does not exist");
 		}
@@ -124,7 +114,7 @@ class DatabaseManager {
 				const chunkCount: number = propObj[DatabaseManager.CHUNK_KEY];
 				let combined = "";
 				for (let i = 0; i < chunkCount; i++) {
-					const partName = `${propertyName}_${i}`;
+					const partName = `${databaseName}_${i}`;
 					const part = this.target.getDynamicProperty(partName) as string | undefined;
 					if (typeof part === "string") {
 						combined += part;
@@ -160,52 +150,37 @@ class DatabaseManager {
  * 		}
  * 		return MyDatabase.instance;
  * 	}
- * }
- *
- * @example
- * // Using a custom namespace
- * class MyCustomDatabase extends SimpleDatabase<PlayerObject> {
- * 	protected static instance: MyCustomDatabase;
- * 	constructor() {
- * 		super("myDatabase", undefined, "customnamespace");
- * 	}
- *
- * 	static getInstance(): MyCustomDatabase {
- * 		if (!MyCustomDatabase.instance) {
- * 			MyCustomDatabase.instance = new MyCustomDatabase();
- * 		}
- * 		return MyCustomDatabase.instance;
- * 	}
- * }
  */
 class SimpleDatabase<T extends SimpleObject> {
 	private mainDB: DatabaseManager;
+	private localDB: T[];
 
 	protected databaseName: string;
 
 	/**
-	 * The constructor initializes the database manager.
+	 * The constructor initializes the local database and syncs it with the main database.
 	 * @param databaseName The name of the database.
 	 * @param target The target entity to store the database in. If undefined, the database is stored in the world.
-	 * @param namespace The namespace to use for the database. If undefined, the global namespace is used.
 	 */
-	protected constructor(databaseName: string, target?: Entity | undefined, namespace?: string) {
-		this.mainDB = new DatabaseManager(target, namespace);
-		this.databaseName = databaseName;
+	protected constructor(databaseName: string, target?: Entity | undefined) {
+		this.databaseName = `${getNamespace()}:${databaseName}`;
+		this.mainDB = new DatabaseManager(target);
 
-		// Initialize the database if it doesn't exist
-		if (!this.mainDB.hasJSONDatabase(this.databaseName)) {
-			this.mainDB.addJSONDatabase(this.databaseName, []);
+		if (this.mainDB.hasJSONDatabase(this.databaseName)) {
+			this.localDB = this.getMainDB();
+		} else {
+			this.localDB = [];
+			this.updateMainDB();
 		}
 	}
 
 	/**
-	 * Updates the main database with the provided data.
+	 * Updates the main database with the local database.
 	 * This method is called automatically when an object is added, updated or removed.
 	 * @private
 	 */
-	private updateMainDB(data: T[]) {
-		this.mainDB.addJSONDatabase(this.databaseName, data);
+	private updateMainDB() {
+		this.mainDB.addJSONDatabase(this.databaseName, this.localDB);
 	}
 
 	/**
@@ -213,27 +188,21 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @private
 	 * @returns The main database.
 	 */
-	private getMainDB(): T[] {
-		try {
-			return this.mainDB.getJSONDatabase(this.databaseName) as T[];
-		} catch {
-			// If database doesn't exist or is corrupted, return empty array
-			return [];
-		}
+	private getMainDB() {
+		return this.mainDB.getJSONDatabase(this.databaseName);
 	}
 
 	/**
-	 * Adds an object to the database.
+	 * Adds an object to the local database and updates the main database.
 	 * @param object The object to be added.
 	 */
 	addObject(object: T): void {
-		const currentData = this.getMainDB();
-		currentData.push(object);
-		this.updateMainDB(currentData);
+		this.localDB.push(object);
+		this.updateMainDB();
 	}
 
 	/**
-	 * Updates an object in the database.
+	 * Updates an object in the local database and the main database.
 	 * If the object does not exist, it is added.
 	 * @param object The object to be updated.
 	 */
@@ -245,57 +214,54 @@ class SimpleDatabase<T extends SimpleObject> {
 	}
 
 	/**
-	 * Checks if an object with the given id exists in the database.
+	 * Checks if an object with the given id exists in the local database.
 	 * @param id The id of the object.
 	 * @returns True if the object exists, false otherwise.
 	 */
 	hasObject(id: string): boolean {
-		const currentData = this.getMainDB();
-		return currentData.map((object: T) => object.id).includes(id);
+		return this.localDB.map((object) => object.id).includes(id);
 	}
 
 	/**
-	 * Retrieves an object with the given id from the database.
+	 * Retrieves an object with the given id from the local database.
 	 * @param id The id of the object.
 	 * @returns The object if it exists, undefined otherwise.
 	 */
 	getObject(id: string): T | undefined {
-		const currentData = this.getMainDB();
-		return currentData.filter((object: T) => object.id === id)[0];
+		return this.localDB.filter((object) => object.id === id)[0];
 	}
 
 	/**
-	 * Removes an object with the given id from the database.
+	 * Removes an object with the given id from the local database and updates the main database.
 	 * @param id The id of the object.
 	 */
 	removeObject(id: string): void {
-		const currentData = this.getMainDB();
-		const updatedData = currentData.filter((object: T) => object.id !== id);
-		this.updateMainDB(updatedData);
+		this.localDB = this.localDB.filter((object) => object.id !== id);
+		this.updateMainDB();
 	}
 
 	/**
-	 * Retrieves all objects from the database.
-	 * @returns An array of all objects in the database.
+	 * Retrieves all objects from the local database.
+	 * @returns An array of all objects in the local database.
 	 */
 	getAllObjects(): T[] {
-		return this.getMainDB();
+		return this.localDB;
 	}
 
 	/**
-	 * Removes all objects from the database.
+	 * Removes all objects from the local database and updates the main database.
 	 */
 	eraseAllObjects(): void {
-		this.updateMainDB([]);
+		this.localDB = [];
+		this.updateMainDB();
 	}
 
 	/**
-	 * Iterates over all objects in the database.
+	 * Iterates over all objects in the local database.
 	 * @param callback The function to be called for each object.
 	 */
-	forEach(callback: (object: T, index: number) => void): void {
-		const currentData = this.getMainDB();
-		currentData.forEach((object: T, index: number) => callback(object, index));
+	forEach(callback: (object: SimpleObject, index: number) => void): void {
+		this.localDB.forEach((object, index) => callback(object, index));
 	}
 }
 

@@ -14,6 +14,9 @@ import {
 	ItemStack,
 } from "@minecraft/server";
 import { calculateDistance, toRadians, toSigned, toUnsigned } from "../math";
+import { EffectManager, EffectObject, EffectConfig, EffectSounds } from "./effectsAPI";
+import { PotionManager, potionManager } from "./potionAPI";
+import { registerProjectileItemCallback, registerCustomProjectileComponent } from "./projectileAPI";
 
 export function getBlocksInASphere(centerBlock: Block | Entity, radius: number, innerRadius?: number) {
 	if (centerBlock) {
@@ -219,3 +222,14 @@ export function getPositionRelative(entity: Entity, offset: Vector3): Vector3 {
 
 	return { x, y, z };
 }
+
+export {
+	EffectManager,
+	EffectObject,
+	EffectConfig,
+	EffectSounds,
+	PotionManager,
+	potionManager,
+	registerProjectileItemCallback,
+	registerCustomProjectileComponent,
+};
