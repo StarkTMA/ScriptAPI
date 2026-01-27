@@ -4,7 +4,6 @@ import {
 	Block,
 	Vector3,
 	world,
-	StructureRotation,
 	Vector2,
 	BlockInventoryComponent,
 	BlockPermutation,
@@ -12,11 +11,12 @@ import {
 	EntityInventoryComponent,
 	EquipmentSlot,
 	ItemStack,
+	Dimension,
 } from "@minecraft/server";
-import { calculateDistance, toRadians, toSigned, toUnsigned } from "../math";
-import { EffectManager, EffectObject, EffectConfig, EffectSounds } from "./effectsAPI";
-import { PotionManager, potionManager } from "./potionAPI";
-import { registerProjectileItemCallback, registerCustomProjectileComponent } from "./projectileAPI";
+import { Trigonometry, Vector } from "../math";
+import { EffectManager, effectManager, EffectObject, EffectConfig, PotionConfig } from "./effectsAPI";
+import { ProjectileManager, projectileManager } from "./projectileAPI";
+import { StructuresManager } from "./structuresAPI";
 
 export function getBlocksInASphere(centerBlock: Block | Entity, radius: number, innerRadius?: number) {
 	if (centerBlock) {
@@ -33,11 +33,12 @@ export function getBlocksInASphere(centerBlock: Block | Entity, radius: number, 
 							block.isValid &&
 							!block.isAir &&
 							!block.permutation.matches("minecraft:bedrock") &&
-							!block.permutation.matches("minecraft:barrier") &&
-							calculateDistance(center, block.location) <= radius &&
-							(!innerRadius || calculateDistance(center, block.location) >= innerRadius)
+							!block.permutation.matches("minecraft:barrier")
 						) {
-							blocks.push(block);
+							const distance = Vector.magnitude(Vector.subtract(center, block.location));
+							if (distance <= radius && (!innerRadius || distance >= innerRadius)) {
+								blocks.push(block);
+							}
 						}
 					} catch (e) {}
 				}
@@ -46,6 +47,24 @@ export function getBlocksInASphere(centerBlock: Block | Entity, radius: number, 
 		return blocks;
 	}
 	return [];
+}
+
+export function getBlocksInRadius(dimension: Dimension, location: Vector3, radius: number) {
+	if (!dimension.isChunkLoaded(location)) return [];
+	let blocks: Block[] = [];
+	for (let x = location.x - radius; x < location.x + radius; x++) {
+		for (let y = location.y - radius; y < location.y + radius; y++) {
+			for (let z = location.z - radius; z < location.z + radius; z++) {
+				try {
+					let block = dimension.getBlock({ x: x, y: y, z: z });
+					if (block && block.isValid && !block.isAir) {
+						blocks.push(block);
+					}
+				} catch (e) {}
+			}
+		}
+	}
+	return blocks;
 }
 
 export function displayActionbar(player: Player | undefined, ...message: any) {
@@ -66,7 +85,7 @@ export function displayActionbar(player: Player | undefined, ...message: any) {
 export function snapYawToGrid(angle: number): number {
 	const gridSize = 90;
 	// Round to nearest grid step, then normalize into [0, 360)
-	const snapped = Math.round(toUnsigned(angle) / gridSize) * gridSize;
+	const snapped = Math.round(Trigonometry.unsignedAngle(angle) / gridSize) * gridSize;
 	return ((snapped % 360) + 360) % 360;
 }
 
@@ -78,8 +97,6 @@ export function snapYawToGrid(angle: number): number {
  */
 export function snapLocationToGrid(location: Vector3, yaw: Vector2, gridSize: number = 1): Vector3 {
 	const snappedYaw = snapYawToGrid(yaw.y);
-	const dx = Math.round(Math.sin(snappedYaw));
-	const dz = Math.round(Math.cos(snappedYaw));
 
 	return {
 		x: Math.floor(location.x / gridSize) * gridSize,
@@ -88,18 +105,8 @@ export function snapLocationToGrid(location: Vector3, yaw: Vector2, gridSize: nu
 	};
 }
 
-export function getStructureRotationEnum(angle: number, offset?: number): StructureRotation {
-	const diff = snapYawToGrid(toUnsigned(angle - (offset ?? 0)));
-	console.log(diff);
-
-	if (Math.abs(diff - 90) < Number.EPSILON) return StructureRotation.Rotate90;
-	if (Math.abs(diff - 180) < Number.EPSILON) return StructureRotation.Rotate180;
-	if (Math.abs(diff - 270) < Number.EPSILON) return StructureRotation.Rotate270;
-	return StructureRotation.None;
-}
-
 export function getRelativeMovementDirection(player: Player, round: boolean): Vector3 {
-	const playerYaw = toRadians(player.getRotation().y);
+	const playerYaw = Trigonometry.radians(player.getRotation().y);
 	const { sin, cos } = { sin: Math.sin(playerYaw), cos: Math.cos(playerYaw) };
 
 	const playerMovement = player.inputInfo.getMovementVector();
@@ -212,24 +219,32 @@ export function saveInventory(entity: Entity, id: string, clearAll: boolean = fa
 	return itemCount;
 }
 
-export function getPositionRelative(entity: Entity, offset: Vector3): Vector3 {
-	const yaw = toRadians(entity.getRotation().y);
-	const pitch = toRadians(entity.getRotation().x);
+export function getPositionRelative(entity: Entity, offset: Vector3, ignorePitch?: boolean): Vector3 {
+	const rotation = entity.getRotation();
+	const yaw = Trigonometry.radians(rotation.y);
+	const pitch = ignorePitch ? 0 : Trigonometry.radians(rotation.x);
 
-	const x = entity.location.x + offset.x * Math.cos(pitch) * Math.cos(yaw) - offset.z * Math.sin(yaw);
-	const y = entity.location.y + offset.x * Math.sin(pitch) + offset.y;
-	const z = entity.location.z + offset.x * Math.cos(pitch) * Math.sin(yaw) + offset.z * Math.cos(yaw);
+	// Apply 3D rotation: pitch around X-axis, then yaw around Y-axis
+	const cosPitch = Math.cos(pitch);
+	const sinPitch = Math.sin(pitch);
+	const cosYaw = Math.cos(yaw);
+	const sinYaw = Math.sin(yaw);
+
+	// Rotate offset vector by pitch and yaw
+	const x = entity.location.x + offset.x * cosPitch * cosYaw - offset.y * sinPitch * cosYaw - offset.z * sinYaw;
+	const y = entity.location.y - offset.z * sinPitch + offset.y * cosPitch;
+	const z = entity.location.z + offset.x * cosPitch * sinYaw - offset.y * sinPitch * sinYaw + offset.z * cosYaw;
 
 	return { x, y, z };
 }
 
 export {
 	EffectManager,
+	effectManager,
 	EffectObject,
 	EffectConfig,
-	EffectSounds,
-	PotionManager,
-	potionManager,
-	registerProjectileItemCallback,
-	registerCustomProjectileComponent,
+	PotionConfig,
+	ProjectileManager,
+	projectileManager,
+	StructuresManager,
 };

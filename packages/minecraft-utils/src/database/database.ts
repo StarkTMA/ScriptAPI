@@ -1,4 +1,4 @@
-import { Entity, world, World } from "@minecraft/server";
+import { Entity, system, world, World } from "@minecraft/server";
 import { SimpleObject } from "./interfaces";
 import { getNamespace } from "../constants";
 
@@ -155,6 +155,11 @@ class SimpleDatabase<T extends SimpleObject> {
 	private mainDB: DatabaseManager;
 	private localDB: T[];
 
+	private pendingChanges = 0;
+
+	private static readonly SAVE_INTERVAL = 20 * 5;
+	private static readonly SAVE_THRESHOLD = 20;
+
 	protected databaseName: string;
 
 	/**
@@ -170,16 +175,25 @@ class SimpleDatabase<T extends SimpleObject> {
 			this.localDB = this.getMainDB();
 		} else {
 			this.localDB = [];
-			this.updateMainDB();
+			this.save();
 		}
+
+		system.runTimeout(() => {
+			if (this.pendingChanges > SimpleDatabase.SAVE_THRESHOLD) {
+				this.save();
+			}
+		}, SimpleDatabase.SAVE_INTERVAL);
+
+		system.beforeEvents.shutdown.subscribe(() => {
+			system.run(() => this.save());
+		});
 	}
 
 	/**
-	 * Updates the main database with the local database.
-	 * This method is called automatically when an object is added, updated or removed.
-	 * @private
+	 * Immediately saves the local database to the main database.
 	 */
-	private updateMainDB() {
+	private save() {
+		this.pendingChanges = 0;
 		this.mainDB.addJSONDatabase(this.databaseName, this.localDB);
 	}
 
@@ -192,13 +206,17 @@ class SimpleDatabase<T extends SimpleObject> {
 		return this.mainDB.getJSONDatabase(this.databaseName);
 	}
 
+	forceSave() {
+		this.save();
+	}
+
 	/**
 	 * Adds an object to the local database and updates the main database.
 	 * @param object The object to be added.
 	 */
 	addObject(object: T): void {
 		this.localDB.push(object);
-		this.updateMainDB();
+		this.pendingChanges++;
 	}
 
 	/**
@@ -219,7 +237,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @returns True if the object exists, false otherwise.
 	 */
 	hasObject(id: string): boolean {
-		return this.localDB.map((object) => object.id).includes(id);
+		return this.localDB.find((object) => object.id === id) !== undefined;
 	}
 
 	/**
@@ -228,7 +246,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 * @returns The object if it exists, undefined otherwise.
 	 */
 	getObject(id: string): T | undefined {
-		return this.localDB.filter((object) => object.id === id)[0];
+		return this.localDB.find((object) => object.id === id);
 	}
 
 	/**
@@ -237,7 +255,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 */
 	removeObject(id: string): void {
 		this.localDB = this.localDB.filter((object) => object.id !== id);
-		this.updateMainDB();
+		this.pendingChanges++;
 	}
 
 	/**
@@ -253,7 +271,7 @@ class SimpleDatabase<T extends SimpleObject> {
 	 */
 	eraseAllObjects(): void {
 		this.localDB = [];
-		this.updateMainDB();
+		this.pendingChanges++;
 	}
 
 	/**
