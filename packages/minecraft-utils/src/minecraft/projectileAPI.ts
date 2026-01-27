@@ -10,7 +10,7 @@ import {
 	EntityProjectileComponent,
 	system,
 } from "@minecraft/server";
-import { Trigonometry, Vector } from "@starktma/minecraft-utils/math";
+import { Trigonometry, Vector } from "../math";
 import { getNamespace } from "../constants";
 
 // ============================= Types =========================================
@@ -56,7 +56,7 @@ class ProjectileManager {
 	private calculateSpawnPosition(
 		playerLocation: Vector3,
 		rotation: { x: number; y: number },
-		offset: Vector3 = { x: 0, y: 0, z: 0 }
+		offset: Vector3 = { x: 0, y: 0, z: 0 },
 	): Vector3 {
 		const yaw = Trigonometry.radians(rotation.y);
 		const pitch = Trigonometry.radians(rotation.x);
@@ -109,12 +109,12 @@ class ProjectileManager {
 			offset?: Vector3;
 			power?: number;
 			angleOffset?: number;
-		} = {}
+		} = {},
 	): Entity | undefined {
 		const spawnLocation = this.calculateSpawnPosition(
 			player.location,
 			player.getRotation(),
-			options.offset || { x: 0, y: 0, z: 0 }
+			options.offset || { x: 0, y: 0, z: 0 },
 		);
 
 		if (!player.dimension.isChunkLoaded(spawnLocation)) return undefined;
@@ -140,7 +140,7 @@ class ProjectileManager {
 		direction: Vector3,
 		power: number = 1,
 		offset: Vector3 = { x: 0, y: 0, z: 0 },
-		spawnEvent?: string
+		spawnEvent?: string,
 	): Entity | undefined {
 		const spawnLocation = Vector.add(entity.location, offset);
 
@@ -167,7 +167,7 @@ class ProjectileManager {
 		projectileId: string,
 		direction: Vector3,
 		power: number = 1,
-		spawnEvent?: string
+		spawnEvent?: string,
 	): Entity | undefined {
 		if (!dimension.isChunkLoaded(location)) return undefined;
 

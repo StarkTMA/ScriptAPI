@@ -1,5 +1,5 @@
 import { PlayerObject, BranchObject } from "./interfaces";
-import { SimpleDatabase } from "@starktma/minecraft-utils/database";
+import { SimpleDatabase } from "../database";
 
 export class BranchDatabase extends SimpleDatabase<BranchObject> {
 	protected static instance: BranchDatabase;
