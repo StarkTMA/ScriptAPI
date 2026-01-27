@@ -8,6 +8,10 @@
 	"author": "",
 	"license": "ISC",
 	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/StarkTMA/ScriptAPI.git"
+	},
 	"scripts": {
 		"build": "npx tsc -b --pretty --verbose",
 		"prepare": "npm run build"
