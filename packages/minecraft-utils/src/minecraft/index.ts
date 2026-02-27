@@ -12,6 +12,7 @@ import {
 	EquipmentSlot,
 	ItemStack,
 	Dimension,
+	StructureSaveMode,
 } from "@minecraft/server";
 import { Trigonometry, Vector } from "../math";
 import { EffectManager, effectManager, EffectObject, EffectConfig, PotionConfig } from "./effectsAPI";
@@ -126,7 +127,10 @@ export function restoreInventory(entity: Entity, id: string) {
 	const blockLocation2 = { ...blockLocation, y: blockLocation.y + 1 };
 
 	const savedStructure = world.structureManager.get(id);
-	if (savedStructure) world.structureManager.place(savedStructure, entity.dimension, blockLocation);
+	if (savedStructure)
+		world.structureManager.place(savedStructure, entity.dimension, blockLocation, {
+			waterlogged: false,
+		});
 	world.structureManager.delete(id);
 
 	const block = entity.dimension.getBlock(blockLocation)!;
@@ -170,6 +174,8 @@ export function saveInventory(entity: Entity, id: string, clearAll: boolean = fa
 	const block = entity.dimension.getBlock(blockLocation)!;
 	const block2 = entity.dimension.getBlock(blockLocation2)!;
 
+	block.setPermutation(BlockPermutation.resolve("minecraft:air"));
+	block2.setPermutation(BlockPermutation.resolve("minecraft:air"));
 	block.setPermutation(BlockPermutation.resolve("minecraft:chest"));
 	block2.setPermutation(BlockPermutation.resolve("minecraft:chest"));
 
@@ -208,7 +214,9 @@ export function saveInventory(entity: Entity, id: string, clearAll: boolean = fa
 		});
 
 	world.structureManager.delete(id);
-	world.structureManager.createFromWorld(id, entity.dimension, blockLocation, blockLocation2);
+	world.structureManager.createFromWorld(id, entity.dimension, blockLocation, blockLocation2, {
+		saveMode: StructureSaveMode.World,
+	});
 
 	blockInventory.container!.clearAll();
 	blockInventory2.container!.clearAll();

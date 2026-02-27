@@ -1,7 +1,29 @@
 import { PlayerObject, BranchObject } from "./interfaces";
-import { SimpleDatabase } from "../database";
+import { SimpleDatabase, SimpleObject } from "../database";
 
-export class BranchDatabase extends SimpleDatabase<BranchObject> {
+abstract class ForceSaveDatabase<T extends SimpleObject> extends SimpleDatabase<T> {
+	addObject(object: T): void {
+		super.addObject(object);
+		this.forceSave();
+	}
+
+	updateObject(object: T): void {
+		super.updateObject(object);
+		this.forceSave();
+	}
+
+	removeObject(id: string): void {
+		super.removeObject(id);
+		this.forceSave();
+	}
+
+	eraseAllObjects(): void {
+		super.eraseAllObjects();
+		this.forceSave();
+	}
+}
+
+export class BranchDatabase extends ForceSaveDatabase<BranchObject> {
 	protected static instance: BranchDatabase;
 	private constructor() {
 		super("branchDatabase", undefined);
@@ -15,7 +37,7 @@ export class BranchDatabase extends SimpleDatabase<BranchObject> {
 	}
 }
 
-export class PlayerDatabase extends SimpleDatabase<PlayerObject> {
+export class PlayerDatabase extends ForceSaveDatabase<PlayerObject> {
 	protected static instance: PlayerDatabase;
 	private constructor() {
 		super("playerDatabase", undefined);

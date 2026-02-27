@@ -179,12 +179,12 @@ export class Trigonometry {
 			const rad = Trigonometry.radians(rotation);
 			return { x: -Math.sin(rad), y: Math.cos(rad) } as Vector2;
 		} else {
-			const rad = Trigonometry.radians(rotation.y);
+			const yawRad = Trigonometry.radians(rotation.y);
 			const pitchRad = Trigonometry.radians(rotation.x);
 			return {
-				x: -Math.sin(rad) * Math.cos(pitchRad),
+				x: -Math.sin(yawRad) * Math.cos(pitchRad),
 				y: Math.sin(pitchRad),
-				z: Math.cos(rad) * Math.cos(pitchRad),
+				z: Math.cos(yawRad) * Math.cos(pitchRad),
 			} as Vector3;
 		}
 	}
