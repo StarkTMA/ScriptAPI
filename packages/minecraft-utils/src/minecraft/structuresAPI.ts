@@ -16,8 +16,8 @@ class StructuresManager {
 	static rotateStructure(
 		structureSize: Vector3,
 		rotationDegrees: number,
-		targetPosition: Vector3
-	): { location: Vector3; rotation: StructureRotation } {
+		targetPosition: Vector3,
+	): { location: Vector3; rotation: StructureRotation; endLocation: Vector3 } {
 		const rotation = this.getRotationEnum(rotationDegrees);
 
 		const normalizedRot = ((Math.round(rotationDegrees) % 360) + 360) % 360;
@@ -63,8 +63,13 @@ class StructuresManager {
 			y: targetPosition.y - rotatedCenterOffset.y,
 			z: targetPosition.z - rotatedCenterOffset.z,
 		};
+		const endLocation = {
+			x: location.x + structureSize.x,
+			y: location.y + structureSize.y,
+			z: location.z + structureSize.z,
+		};
 
-		return { location, rotation };
+		return { location, rotation, endLocation };
 	}
 }
 
