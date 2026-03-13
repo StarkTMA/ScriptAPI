@@ -113,7 +113,7 @@ class CustomPlayer {
 	}
 }
 
-class PlayerManager<T extends CustomPlayer = CustomPlayer> {
+abstract class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 	private players = new Map<string, T>();
 	private events = new Map<string, EventGroup<T>>();
 
@@ -141,9 +141,7 @@ class PlayerManager<T extends CustomPlayer = CustomPlayer> {
 		});
 	}
 
-	protected createPlayerManager(player: Player): T {
-		return new CustomPlayer(player) as T;
-	}
+	protected abstract createPlayerManager(player: Player): T;
 
 	getAllPlayers(): T[] {
 		return Array.from(this.players.values());
